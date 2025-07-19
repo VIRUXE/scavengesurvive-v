@@ -1,0 +1,6 @@
+[submodule "resources/oxmysql"]
+	path = resources/oxmysql
+	url = https://github.com/CommunityOx/oxmysql
+[submodule "resources/ox_lib"]
+	path = resources/ox_lib
+	url = https://github.com/CommunityOx/ox_lib
