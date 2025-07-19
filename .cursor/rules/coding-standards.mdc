@@ -1,0 +1,20 @@
+---
+alwaysApply: true
+---
+
+# Coding Standards
+
+## Naming Conventions
+
+- Use `camelCase` for variables and functions
+- Use `PascalCase` for classes/modules
+- Use descriptive names that reflect purpose
+
+## Print Statements
+
+- Avoid square brackets in print statements (the server uses them)
+
+## Exports and Global Variables
+
+- When using exports, search for a global variable with the same name and use it instead
+- If a resource is being used more than twice, create a global variable for it

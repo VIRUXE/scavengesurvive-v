@@ -1,0 +1,16 @@
+---
+description: Executing commands
+alwaysApply: false
+---
+# PowerShell Usage Guidelines
+
+## Command Line
+
+- Use PowerShell when using the commandline
+- Wrap paths in single quotes and escape square brackets
+
+## Example
+
+```powershell
+Get-ChildItem -Path 'C:\path\[with\]brackets'
+```
