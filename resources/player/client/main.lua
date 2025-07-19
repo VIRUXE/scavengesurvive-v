@@ -59,9 +59,6 @@ function SpawnPlayer()
     TriggerEvent('player:spawned')
 end
 
-SetArtificialLightsState(true)
-SetArtificialLightsStateAffectsVehicles(false)
-SetClockTime(0, 0, 0)
-PauseClock(true) -- We'll have it paused for now
+
 
 SpawnPlayer()
