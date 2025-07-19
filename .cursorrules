@@ -1,14 +1,12 @@
----
-description: Generating commit messages
-alwaysApply: false
----
-# Commit Message Conventions
+# Development Rules
+
+## Commit Message Conventions
 
 ```
 type(resource/subject): description
 ```
 
-## Types
+### Types
 
 - `feat`: New features
 - `fix`: Bug fixes
@@ -24,13 +22,13 @@ type(resource/subject): description
 - `merge`: Merge commits
 - `other`: Other changes
 
-## Examples
+### Examples
 
 - `feat(player/inventory): adds new inventory functionality`
 - `refactor(.cursorrules): more rules`
 - `fix(admin/time): fixes time synchronization`
 
-## Format Explanation
+### Format Explanation
 
 - `player` is the resource name (without the path)
 - `.cursorrules` is the file name if it's not a resource
