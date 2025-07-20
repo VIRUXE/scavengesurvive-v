@@ -48,12 +48,9 @@ function Spawn(position, heading, cleanupCompleted)
     ShutdownLoadingScreen()
 
     if IsScreenFadedOut() then
-        DoScreenFadeIn(500)
-        while not IsScreenFadedIn() do Wait(0) end
+        DoScreenFadeIn(5000)
+        Wait(5000)
     end
-
-    DoScreenFadeIn(500)
-    Wait(500)
 
     if IsEntityPositionFrozen(cache.ped) then FreezeEntityPosition(cache.ped, false) end
 
