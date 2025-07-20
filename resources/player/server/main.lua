@@ -24,7 +24,7 @@ AddEventHandler('playerDropped', function()
 end)
 
 -- Command to force respawn a player
-RegisterCommand('respawn', function(source, args, rawCommand)
+--[[ RegisterCommand('respawn', function(source, args, rawCommand)
     local targetId = tonumber(args[1]) or source
     
     if GetPlayerName(targetId) then
@@ -37,7 +37,7 @@ RegisterCommand('respawn', function(source, args, rawCommand)
             args = {'System', 'Player not found'}
         })
     end
-end, false)
+end, false) ]]
 
 -- Command to check spawn status
 RegisterCommand('spawnstatus', function(source, args, rawCommand)

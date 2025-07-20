@@ -7,4 +7,5 @@ client_script 'client/*.lua'
 server_script 'server/*.lua'
 shared_scripts {
     '@ox_lib/init.lua',
+    'shared/*.lua'
 }
