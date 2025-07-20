@@ -1,5 +1,5 @@
 RegisterNetEvent('time:set', function(time)
-    SetClockTime(math.floor(time / 100), time % 100, 0)
+    NetworkOverrideClockTime(time, 0, 0)
 
     lib.notify({
         title = 'Time',
