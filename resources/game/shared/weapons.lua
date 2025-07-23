@@ -1054,7 +1054,7 @@ exports('GetWeapons', function(params)
     -- If no parameters provided, return all weapons
     if not params then return Weapons end
     
-    -- Handle group filtering
+    -- Group filtering
     if params.group then
         if Weapons[params.group] then
             result[params.group] = Weapons[params.group]
@@ -1065,14 +1065,14 @@ exports('GetWeapons', function(params)
         result = Weapons
     end
     
-    -- Handle property filtering
+    -- Property filtering
     if params.properties then
         local filteredResult = {}
         
         for groupName, groupWeapons in pairs(result) do
             filteredResult[groupName] = {}
             
-            for i, weapon in ipairs(groupWeapons) do
+            for _, weapon in ipairs(groupWeapons) do
                 local filteredWeapon = {}
                 
                 for _, property in ipairs(params.properties) do
