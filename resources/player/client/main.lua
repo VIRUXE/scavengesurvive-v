@@ -9,14 +9,18 @@ function Spawn(position, heading, cleanupCompleted)
     isSpawning = true
 
     DoScreenFadeOut(500)
-    Wait(500)
+    while not IsScreenFadedOut() do Wait(500) end
 
-    local x, y, z = table.unpack(position)
+    local x, y, z in position
 
     RequestCollisionAtCoord(x, y, z)
 
     SetEntityCoords(cache.ped, x, y, z, true, false, false, false)
     if heading then SetEntityHeading(cache.ped, heading) end
+
+    -- Wait for collision to load, if it doesn't load in 5 seconds (dogshit computer stuff), we'll just continue
+    local time = GetGameTimer()
+    while not HasCollisionLoadedAroundEntity(cache.ped) and (GetGameTimer() - time) < 5000 do Wait(0) end
 
     NetworkResurrectLocalPlayer(x, y, z, 0.0, 0, false)
 
@@ -40,10 +44,6 @@ function Spawn(position, heading, cleanupCompleted)
     --ForceLoadingScreen(true)
     --loadScene(spawn.x, spawn.y, spawn.z)
     --ForceLoadingScreen(false)
-
-    -- Wait for collision to load, if it doesn't load in 5 seconds (dogshit computer stuff), we'll just continue
-    local time = GetGameTimer()
-    while not HasCollisionLoadedAroundEntity(cache.ped) and (GetGameTimer() - time) < 5000 do Wait(0) end
 
     ShutdownLoadingScreen()
 
