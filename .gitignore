@@ -2,6 +2,9 @@
 cache/
 resources/\[maps\]/
 db/
+resources/\[admin\]/vMenu/
+resources/oxmysql/
+resources/ox_lib/
 
 .replxx_history
 env.cfg
