@@ -1,5 +1,8 @@
+.cursor/
 cache/
 resources/\[maps\]/
+db/
 
 .replxx_history
 env.cfg
+.cursorignore
