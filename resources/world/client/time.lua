@@ -1,9 +1,5 @@
 RegisterNetEvent('time:set', function(time)
     NetworkOverrideClockTime(time, 0, 0)
 
-    lib.notify({
-        title = 'Time',
-        description = 'Time set to ' .. time,
-        type = 'success'
-    })
+    lib.print.info('Clock override: Time set to ' .. time)
 end)
