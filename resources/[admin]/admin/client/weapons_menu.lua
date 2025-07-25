@@ -1,4 +1,3 @@
-local weapons = exports.game:GetWeapons()
 local ammoToGive = 250
 local ammoValues = {10, 50, 100, 250, 500, 1000}
 local defaultAmmoIndex = 4
@@ -7,6 +6,16 @@ RegisterNetEvent('admin:showWeaponsMenu', function()
     ammoToGive = ammoValues[defaultAmmoIndex]
     lib.showMenu('giveWeapon')
 end)
+
+-- Create a local copy to sort, to avoid modifying the global table
+local sortedWeapons = lib.table.deepclone(exports.game:GetWeapons())
+
+-- Define the order of weapon categories
+local sortedWeaponGroups = {
+    "Melee", "Pistol", "SMG", "Shotgun", "Rifle", "MachineGun", "Sniper",
+    "Heavy", "Thrown", "PetrolCan", "StunGun", "Unarmed", "FireExtinguisher",
+    "HackingDevice", "MetalDetector"
+}
 
 -- Register the menu
 local options = {
@@ -19,22 +28,29 @@ local options = {
     }
 }
 
-for categoryName, categoryWeapons in pairs(weapons) do
-    local weaponValues = {}
+for _, categoryName in ipairs(sortedWeaponGroups) do
+    local categoryWeapons = sortedWeapons[categoryName]
 
-    for _, weapon in ipairs(categoryWeapons) do
-        table.insert(weaponValues, {
-            label       = weapon.name,
-            description = weapon.description or 'No description available.'
-        })
-    end
+    if categoryWeapons and #categoryWeapons > 0 then
+        table.sort(categoryWeapons, function(a, b)
+            return a.name < b.name
+        end)
 
-    if #weaponValues > 0 then
-        table.insert(options, {
-            label = categoryName,
-            icon = 'fa-solid fa-gun',
-            values = weaponValues,
-        })
+        local weaponValues = {}
+        for _, weapon in ipairs(categoryWeapons) do
+            table.insert(weaponValues, {
+                label       = weapon.name,
+                description = weapon.description or 'No description available.'
+            })
+        end
+
+        if #weaponValues > 0 then
+            table.insert(options, {
+                label = categoryName,
+                icon = 'fa-solid fa-gun',
+                values = weaponValues,
+            })
+        end
     end
 end
 
@@ -51,7 +67,7 @@ lib.registerMenu({
     if not selected or selected == 1 or not scrollIndex then return end
 
     local categoryName = options[selected].label
-    local weapon = weapons[categoryName][scrollIndex]
+    local weapon = sortedWeapons[categoryName][scrollIndex]
 
     if not weapon then return end
 
