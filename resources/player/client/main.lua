@@ -102,4 +102,6 @@ end
 
 RegisterNetEvent('player:respawn', SpawnAtRandomLocation)
 
+lib.callback.register('player:getForwardVector', function() return GetEntityForwardVector(cache.ped) end)
+
 SpawnAtRandomLocation()
