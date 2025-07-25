@@ -1,11 +1,9 @@
 local weapons = exports.game:GetWeapons()
-local targetPlayerId = nil
 local ammoToGive = 250
 local ammoValues = {10, 50, 100, 250, 500, 1000}
 local defaultAmmoIndex = 4
 
-RegisterNetEvent('admin:showWeaponsMenu', function(playerId)
-    targetPlayerId = playerId
+RegisterNetEvent('admin:showWeaponsMenu', function()
     ammoToGive = ammoValues[defaultAmmoIndex]
     lib.showMenu('giveWeapon')
 end)
@@ -48,9 +46,6 @@ lib.registerMenu({
         if selected == 1 then -- Setting the ammo amount
             ammoToGive = ammoValues[scrollIndex]
         end
-    end,
-    onClose = function()
-        targetPlayerId = nil
     end
 }, function(selected, scrollIndex)
     if not selected or selected == 1 or not scrollIndex then return end
@@ -60,5 +55,5 @@ lib.registerMenu({
 
     if not weapon then return end
 
-    TriggerServerEvent('admin:giveWeapon', targetPlayerId, weapon.hash, weapon.name, ammoToGive)
+    TriggerServerEvent('admin:giveWeapon', weapon.hash, ammoToGive)
 end)

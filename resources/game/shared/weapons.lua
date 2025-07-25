@@ -1047,6 +1047,15 @@ Weapons = {
         }
     }
 }
+exports('GetWeaponName', function(weaponHash)
+    for _, group in pairs(Weapons) do
+        for _, weapon in pairs(group) do
+            if weapon.hash == weaponHash then
+                return weapon.name
+            end
+        end
+    end
+end)
 
 exports('GetWeapons', function(params)
     local result = {}
