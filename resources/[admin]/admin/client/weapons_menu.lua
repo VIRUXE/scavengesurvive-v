@@ -17,6 +17,24 @@ local sortedWeaponGroups = {
     "HackingDevice", "MetalDetector"
 }
 
+local weaponGroupIcons = {
+    Melee            = 'fa-solid fa-hand-fist',
+    Pistol           = 'fa-solid fa-gun',
+    SMG              = 'fa-solid fa-gun',
+    Shotgun          = 'fa-solid fa-gun',
+    Rifle            = 'fa-solid fa-bullseye',
+    MachineGun       = 'fa-solid fa-gun',
+    Sniper           = 'fa-solid fa-crosshairs',
+    Heavy            = 'fa-solid fa-rocket',
+    Thrown           = 'fa-solid fa-bomb',
+    PetrolCan        = 'fa-solid fa-gas-pump',
+    StunGun          = 'fa-solid fa-bolt',
+    Unarmed          = 'fa-solid fa-hand',
+    FireExtinguisher = 'fa-solid fa-fire-extinguisher',
+    HackingDevice    = 'fa-solid fa-laptop-code',
+    MetalDetector    = 'fa-solid fa-magnet'
+}
+
 -- Register the menu
 local options = {
     {
@@ -47,7 +65,7 @@ for _, categoryName in ipairs(sortedWeaponGroups) do
         if #weaponValues > 0 then
             table.insert(options, {
                 label = categoryName,
-                icon = 'fa-solid fa-gun',
+                icon = weaponGroupIcons[categoryName] or 'fa-solid fa-gun',
                 values = weaponValues,
             })
         end
