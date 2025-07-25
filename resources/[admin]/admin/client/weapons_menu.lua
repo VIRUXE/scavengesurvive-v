@@ -61,10 +61,10 @@ for _, categoryName in ipairs(sortedWeaponGroups) do
                 description = weapon.description or 'No description available.'
             })
         end
-
+        
         if #weaponValues > 0 then
             table.insert(options, {
-                label = categoryName,
+                label = categoryName:gsub('(%l)(%u)', '%1 %2'),
                 icon = weaponGroupIcons[categoryName] or 'fa-solid fa-gun',
                 values = weaponValues,
             })
