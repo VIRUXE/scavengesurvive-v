@@ -102,6 +102,14 @@ end
 
 RegisterNetEvent('player:respawn', SpawnAtRandomLocation)
 
-lib.callback.register('player:getForwardVector', function() return GetEntityForwardVector(cache.ped) end)
+RegisterNetEvent('player:spawn', function(position, heading)
+    if position then
+        Spawn(position, heading, function()
+            lib.print.info('Spawned at last known location')
+        end)
+    else
+        SpawnAtRandomLocation()
+    end
+end)
 
-SpawnAtRandomLocation()
+lib.callback.register('player:getForwardVector', function() return GetEntityForwardVector(cache.ped) end)
