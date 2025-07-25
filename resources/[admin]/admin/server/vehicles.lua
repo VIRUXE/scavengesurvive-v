@@ -43,7 +43,7 @@ RegisterNetEvent('admin:spawnVehicle', function(vehicle)
 
     spawnVehicleForPlayer(playerId, vehicle)
 
-    table.remove(requests, playerId)
+    if lib.table.contains(requests, playerId) then table.remove(requests, playerId) end
 end)
 
 lib.addCommand('veh', {
@@ -77,6 +77,6 @@ lib.addCommand('veh', {
 end)
 
 AddEventHandler('playerDropped', function()
-    table.remove(requests, source)
+    if lib.table.contains(requests, source) then table.remove(requests, source) end
 end)
  
