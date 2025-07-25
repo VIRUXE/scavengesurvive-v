@@ -8,7 +8,7 @@ RegisterNetEvent('admin:showWeaponsMenu', function()
 end)
 
 -- Create a local copy to sort, to avoid modifying the global table
-local sortedWeapons = lib.table.deepclone(exports.game:GetWeapons())
+local weapons = lib.table.deepclone(exports.game:GetWeapons())
 
 -- Define the order of weapon categories
 local sortedWeaponGroups = {
@@ -47,7 +47,7 @@ local options = {
 }
 
 for _, categoryName in ipairs(sortedWeaponGroups) do
-    local categoryWeapons = sortedWeapons[categoryName]
+    local categoryWeapons = weapons[categoryName]
 
     if categoryWeapons and #categoryWeapons > 0 then
         table.sort(categoryWeapons, function(a, b)
@@ -85,7 +85,7 @@ lib.registerMenu({
     if not selected or selected == 1 or not scrollIndex then return end
 
     local categoryName = options[selected].label
-    local weapon = sortedWeapons[categoryName][scrollIndex]
+    local weapon = weapons[categoryName][scrollIndex]
 
     if not weapon then return end
 
