@@ -109,7 +109,11 @@ RegisterNetEvent('player:spawn', function(position, heading)
         end)
     else
         SpawnAtRandomLocation()
+
+        lib.print.info('Spawned at random location')
     end
 end)
 
 lib.callback.register('player:getForwardVector', function() return GetEntityForwardVector(cache.ped) end)
+
+TriggerServerEvent('player:loaded') -- Client is done loading so we'll request to spawn
