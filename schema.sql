@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS `account_identifiers` (
   `value` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `last_used` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `times_used` int(11) NOT NULL DEFAULT 1,
   PRIMARY KEY (`account_id`, `type`),
   UNIQUE KEY `idx_type_value` (`type`, `value`),
   CONSTRAINT `fk_account_identifiers_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE
@@ -26,6 +28,8 @@ CREATE TABLE IF NOT EXISTS `account_tokens` (
   `token` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `last_used` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `times_used` int(11) NOT NULL DEFAULT 1,
   PRIMARY KEY (`account_id`,`token`),
   KEY `account_id` (`account_id`),
   CONSTRAINT `fk_account_tokens_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE

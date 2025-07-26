@@ -140,7 +140,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
                     for _, identifier in ipairs(playerIdentifiers) do
                         local parsedId = parseIdentifier(identifier)
                         if parsedId then
-                            MySQL.insert.await('INSERT IGNORE INTO account_identifiers (account_id, type, value) VALUES (?, ?, ?)', {
+                            MySQL.insert.await('INSERT INTO account_identifiers (account_id, type, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1', {
                                 account.id,
                                 parsedId.type,
                                 parsedId.value
@@ -149,7 +149,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
                     end
 
                     for _, token in ipairs(playerTokens) do
-                        MySQL.insert.await('INSERT IGNORE INTO account_tokens (account_id, token) VALUES (?, ?)', {
+                        MySQL.insert.await('INSERT INTO account_tokens (account_id, token) VALUES (?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1', {
                             account.id,
                             token
                         })
@@ -366,12 +366,12 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
                         for _, identifier in ipairs(playerIdentifiers) do
                             local parsedId = parseIdentifier(identifier)
                             if parsedId then
-                                MySQL.insert.await('INSERT IGNORE INTO account_identifiers (account_id, type, value) VALUES (?, ?, ?)', { account.id, parsedId.type, parsedId.value })
+                                MySQL.insert.await('INSERT INTO account_identifiers (account_id, type, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1', { account.id, parsedId.type, parsedId.value })
                             end
                         end
     
                         for _, token in ipairs(playerTokens) do
-                            MySQL.insert.await('INSERT IGNORE INTO account_tokens (account_id, token) VALUES (?, ?)', { account.id, token })
+                            MySQL.insert.await('INSERT INTO account_tokens (account_id, token) VALUES (?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1', { account.id, token })
                         end
 
                         Players[playerId] = account
@@ -444,12 +444,12 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
                         for _, identifier in ipairs(playerIdentifiers) do
                             local parsedId = parseIdentifier(identifier)
                             if parsedId then
-                                MySQL.insert.await('INSERT INTO account_identifiers (account_id, type, value) VALUES (?, ?, ?)', { accountId, parsedId.type, parsedId.value })
+                                MySQL.insert.await('INSERT INTO account_identifiers (account_id, type, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1', { accountId, parsedId.type, parsedId.value })
                             end
                         end
     
                         for _, token in ipairs(playerTokens) do
-                            MySQL.insert.await('INSERT INTO account_tokens (account_id, token) VALUES (?, ?)', { accountId, token })
+                            MySQL.insert.await('INSERT INTO account_tokens (account_id, token) VALUES (?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1', { accountId, token })
                         end
 
                         Players[playerId] = { id = accountId, username = username, email = email }
