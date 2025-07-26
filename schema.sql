@@ -33,4 +33,4 @@ CREATE TABLE IF NOT EXISTS `account_tokens` (
   PRIMARY KEY (`account_id`,`token`),
   KEY `account_id` (`account_id`),
   CONSTRAINT `fk_account_tokens_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4; 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
