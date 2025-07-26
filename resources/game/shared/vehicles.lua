@@ -916,9 +916,9 @@ exports('GetVehiclesByPartialName', function(partialName)
 
     for _, category in pairs(Vehicles) do
         for _, vehicle in pairs(category) do
-            if vehicle?.DisplayName:lower():find(searchTerm) or
+            if (vehicle.DisplayName and vehicle.DisplayName:lower():find(searchTerm)) or
                vehicle?.ModelName:lower():find(searchTerm) or
-               vehicle?.RealName:lower():find(searchTerm) then
+               (vehicle.RealName and vehicle.RealName:lower():find(searchTerm)) then
                 table.insert(results, vehicle)
             end
         end
