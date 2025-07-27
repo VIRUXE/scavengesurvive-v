@@ -6,7 +6,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     deferrals.defer()
 
     local playerId = source
-    local player = Player:new(playerId)
+    local player = User:new(playerId)
 
     Players[playerId] = player
 
@@ -44,6 +44,8 @@ AddEventHandler('player:loggedIn', function(playerId)
     TriggerClientEvent('player:spawn', playerId, json.decode(player.Account.last_position), 0.0)
 
     player.Spawned = true
+
+    Player(playerId).state.username = player.Account.username
 
     player:log('playerLoggedIn', 'has logged in.')
 end)
