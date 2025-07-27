@@ -17,24 +17,23 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     
     showWelcomeCard(deferrals, player)
 
-    lib.print.debug(('Player %s (%d) is connecting'):format(player.Name, playerId))
+    lib.print.debug(('Player %s (%d) is connecting'):format(name, playerId))
 end)
 
 -- A server-side event that is triggered when a player has a finally-assigned NetID.
 -- https://docs.fivem.net/docs/scripting-reference/events/server-events/#playerjoining
 AddEventHandler('playerJoining', function(oldPlayerId)
     local playerId = source
-    local player = Players[oldPlayerId]
+    local player = Players[tonumber(oldPlayerId)] -- why tf would oldPlayerId be a string?
 
     player.Id = playerId
 
     Players[playerId] = player
-
     Players[oldPlayerId] = nil -- Remove the temporary player object
 
     TriggerEvent('player:loggedIn', playerId) -- Now we're good
 
-    lib.print.debug(('Player %s (%d/%d) is joining'):format(player.Name, playerId, oldPlayerId))
+    lib.print.debug(('Player %s (%d) is joining'):format(player.Name, playerId))
 end)
 
 AddEventHandler('player:loggedIn', function(playerId)
@@ -66,13 +65,3 @@ AddEventHandler('playerDropped', function()
 
     Players[playerId] = nil
 end)
-
--- Export function to check if player is spawned
---[[ exports('isPlayerSpawned', function(playerId)
-    return spawnedPlayers[playerId] or false
-end) ]]
-
--- Export function to get all spawned players
---[[ exports('getSpawnedPlayers', function()
-    return spawnedPlayers
-end) ]]
