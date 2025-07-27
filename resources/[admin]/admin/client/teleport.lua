@@ -66,7 +66,7 @@ local function handleTpNormally(x, y, z)
     -- handle vehicle teleport
     if veh > 0 then
         veh = GetVehiclePedIsIn(ped, false) --update veh id
-        SetEntityAlpha(veh, 125)
+        SetEntityAlpha(veh, 125, true)
         SetEntityCoords(veh, x, y, z + 0.5, false, false, false, false)
         SetPedIntoVehicle(ped, veh, -1)
         SetVehicleOnGroundProperly(veh)
