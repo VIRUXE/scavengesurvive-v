@@ -101,3 +101,15 @@ lib.addCommand('tp', {
         print("Invalid coordinates. Use: /tp x,y,z[,heading] or /tp {\"x\":0,\"y\":0,\"z\":0[,\"w\":0]}")
     end
 end)
+
+lib.addCommand({'tpm', 'tpw'}, {
+    help = 'Teleport to a Marker/Waypoint',
+    restricted = 'group.admin'
+}, function(playerId, args, rawCommand)
+    local player = exports.player:Get(playerId)
+    local event = 'admin:teleportToMarker'
+
+    TriggerClientEvent(event, playerId)
+
+    player:log(event, 'Teleported to marker.')
+end)

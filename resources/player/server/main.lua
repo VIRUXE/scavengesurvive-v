@@ -67,3 +67,11 @@ AddEventHandler('playerDropped', function()
 
     Players[playerId] = nil
 end)
+
+exports('Get', function(playerId)
+    local player = Players[playerId]
+
+    if not player then lib.print.error('Unknown player id: ' .. playerId) end
+        
+    return player
+end)
