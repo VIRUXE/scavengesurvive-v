@@ -1,0 +1,1 @@
+SetPedConfigFlag(cache.ped, 35, false) -- 35 is the helmet prop index, 1 disables auto helmet
