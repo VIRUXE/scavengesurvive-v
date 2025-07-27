@@ -1,5 +1,3 @@
----@diagnostic disable: param-type-mismatch, need-check-nil
-
 local showWelcomeCard = require 'server.auth.welcomeCard'
 
 Players = {}
@@ -17,23 +15,25 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     
     showWelcomeCard(deferrals, player)
 
-    lib.print.debug(('Player %s (%d) is connecting'):format(name, playerId))
+    player:log('playerConnecting', 'is connecting.')
 end)
 
 -- A server-side event that is triggered when a player has a finally-assigned NetID.
 -- https://docs.fivem.net/docs/scripting-reference/events/server-events/#playerjoining
 AddEventHandler('playerJoining', function(oldPlayerId)
+    oldPlayerId = tonumber(oldPlayerId) -- why tf would oldPlayerId be a string?
     local playerId = source
-    local player = Players[tonumber(oldPlayerId)] -- why tf would oldPlayerId be a string?
+    local player = Players[oldPlayerId]
 
     player.Id = playerId
 
     Players[playerId] = player
+---@diagnostic disable-next-line: need-check-nil
     Players[oldPlayerId] = nil -- Remove the temporary player object
 
     TriggerEvent('player:loggedIn', playerId) -- Now we're good
 
-    lib.print.debug(('Player %s (%d) is joining'):format(player.Name, playerId))
+    player:log('playerJoining', 'is joining.')
 end)
 
 AddEventHandler('player:loggedIn', function(playerId)
@@ -46,7 +46,7 @@ AddEventHandler('player:loggedIn', function(playerId)
 
     player.Spawned = true
 
-    lib.print.debug(('Player %s (%d) logged in.'):format(player.Name, playerId))
+    player:log('playerLoggedIn', 'has logged in.')
 end)
 
 AddEventHandler('playerDropped', function()
@@ -62,6 +62,8 @@ AddEventHandler('playerDropped', function()
             player.Account.id
         })
     end
+
+    player:log('playerDropped', 'Player dropped.')
 
     Players[playerId] = nil
 end)
