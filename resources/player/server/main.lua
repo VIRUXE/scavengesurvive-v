@@ -2,7 +2,6 @@ local showWelcomeCard = require 'server.auth.welcomeCard'
 
 Players = {}
 
--- Handle player joining
 AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     deferrals.defer()
 
@@ -21,7 +20,7 @@ end)
 -- A server-side event that is triggered when a player has a finally-assigned NetID.
 -- https://docs.fivem.net/docs/scripting-reference/events/server-events/#playerjoining
 AddEventHandler('playerJoining', function(oldPlayerId)
-    oldPlayerId = tonumber(oldPlayerId) -- why tf would oldPlayerId be a string?
+    oldPlayerId = tonumber(oldPlayerId) -- ? why tf would oldPlayerId be a string?
     local playerId = source
     local player = Players[oldPlayerId]
 
