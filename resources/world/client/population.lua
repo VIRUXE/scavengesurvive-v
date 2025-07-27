@@ -1,4 +1,4 @@
-SetPedPopulationBudget(0)
+--[[ SetPedPopulationBudget(0)
 SetVehiclePopulationBudget(0)
 SetGarbageTrucks(false)
 SetRandomBoats(false)
@@ -16,4 +16,4 @@ CreateThread(function()
 
         Wait(0)
     end
-end)
+end) ]]
