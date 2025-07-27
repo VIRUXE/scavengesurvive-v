@@ -8,6 +8,7 @@ SetCreateRandomCopsOnScenarios(false)
 
 CreateThread(function()
     while true do
+        SetPedDensityMultiplierThisFrame(0.0)
         SetScenarioPedDensityMultiplierThisFrame(0.0, 0.0)
         SetParkedVehicleDensityMultiplierThisFrame(0.0)
         SetVehicleDensityMultiplierThisFrame(0.0)
