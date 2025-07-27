@@ -58,6 +58,7 @@ local function showRecoveryCard(deferrals, player, message)
         end
 
         if recoveryData.action == 'back_to_welcome' then
+---@diagnostic disable-next-line: undefined-global
             showWelcomeCard(deferrals, player)
             return
         end
