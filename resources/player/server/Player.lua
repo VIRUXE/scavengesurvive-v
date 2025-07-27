@@ -42,7 +42,7 @@ end
 ---@param message string Message
 ---@param ... any Additional arguments to pass to the logger
 function Player:log(eventName, message, ...)
-    lib.print.info(('(%d) %s [%s] %s'):format(self.Id, self.Name, self.Account.username or 'N/A', message))
+    lib.print.info(('(%d) %s [%s] %s'):format(self.Id, self.Name, self.Account?.username or 'Not Logged In', message))
     lib.logger(self.Id, eventName, message, ...)
 end
 
