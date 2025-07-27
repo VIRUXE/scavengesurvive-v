@@ -64,7 +64,7 @@ AddEventHandler('playerDropped', function()
         })
     end
 
-    player:log('playerDropped', 'Player dropped.')
+    player:log('playerDropped', 'dropped')
 
     Players[playerId] = nil
 end)
