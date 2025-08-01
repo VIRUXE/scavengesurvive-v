@@ -79,7 +79,7 @@ end)
 
 -- * This is mainly for when this resource is restarted, so we can get the player's account from the database and re-add them to the Players table
 for playerId in ipairs(GetPlayers()) do
-    local playerUsername = User(playerId).state.username
+    local playerUsername = Player(playerId).state.username
 
     local account = MySQL.query.await('SELECT * FROM accounts WHERE username = ?', { playerUsername })
 
