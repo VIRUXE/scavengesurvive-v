@@ -6,14 +6,12 @@
 -- @param font number|nil: Font index to use (default 0).
 -- @param color table|nil: Table with r, g, b, a values (0-255) for text colour.
 -- @param scale number|nil: Scale of the text (default 1.0).
--- @param center boolean|nil: Whether to centre the text horizontally.
 -- @param right boolean|nil: Whether to right-justify the text.
--- @param bottom boolean|nil: Whether to wrap text at the x position.
 -- @param shadow boolean|nil: Whether to add a shadow to the text.
 -- @param outline boolean|nil: Whether to add an outline to the text.
 -- @param fontType number|nil: Alternative font index to use (overrides font).
 -- @param justify number|nil: Justification type (default 0).
-function DrawText(text, x, y, font, color, scale, center, right, bottom, shadow, outline, fontType, justify)
+function DrawText(text, x, y, font, color, scale, right, shadow, outline, justify)
     if not text or not x or not y then return end
 
     SetTextFont(font or 0)
@@ -25,14 +23,14 @@ function DrawText(text, x, y, font, color, scale, center, right, bottom, shadow,
         SetTextColour(255, 255, 255, 255)
     end
 
-    if fontType then SetTextFont(fontType) end
     if shadow then SetTextDropShadow() end
-    if outline then SetTextEdge(1, 0, 0, 0, 255) end
-    if center then SetTextCentre(true) end
+    if outline then SetTextOutline() end
     if right then SetTextRightJustify(true) end
-    if bottom then SetTextWrap(0.0, x) end
     SetTextJustification(justify or 0)
+    SetTextWrap(0.0, 1.0)
     BeginTextCommandDisplayText("STRING")
     AddTextComponentSubstringPlayerName(text)
     EndTextCommandDisplayText(x, y)
 end
+
+exports('DrawText', DrawText)
