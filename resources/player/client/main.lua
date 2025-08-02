@@ -116,4 +116,21 @@ end)
 
 lib.callback.register('player:getForwardVector', function() return GetEntityForwardVector(cache.ped) end)
 
+-- Watermark
+CreateThread(function()
+    while true do
+        DrawText2D({
+            text = 'Scavenge and Survive V - DEV PREVIEW',
+            coords = vec2(1.0, 0.5),
+            scale = 0.5,
+            color = vec4(255, 255, 255, 255),
+            enableDropShadow = false,
+            enableOutline = false,
+        })
+        Wait(0)
+    end
+end)
+
 TriggerServerEvent('player:loaded') -- Client is done loading so we'll request to spawn
+
+DisplayHud(false)
