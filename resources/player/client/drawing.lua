@@ -1,36 +1,72 @@
+---@class DrawTextParams
+---@field text string
+---@field scale? integer default: `0.35`
+---@field font? integer default: `4`
+---@field color? vector4 rgba, white by default
+---@field enableDropShadow? boolean
+---@field enableOutline? boolean
 
---- Draws text on the screen with various formatting options.
--- @param text string: The text to display.
--- @param x number: X position on the screen (0.0 - 1.0).
--- @param y number: Y position on the screen (0.0 - 1.0).
--- @param font number|nil: Font index to use (default 0).
--- @param color table|nil: Table with r, g, b, a values (0-255) for text colour.
--- @param scale number|nil: Scale of the text (default 1.0).
--- @param right boolean|nil: Whether to right-justify the text.
--- @param shadow boolean|nil: Whether to add a shadow to the text.
--- @param outline boolean|nil: Whether to add an outline to the text.
--- @param fontType number|nil: Alternative font index to use (overrides font).
--- @param justify number|nil: Justification type (default 0).
-function DrawText(text, x, y, font, color, scale, right, shadow, outline, justify)
-    if not text or not x or not y then return end
+---@class DrawText2DParams : DrawTextParams
+---@field coords vector2
+---@field width? number default: `1.0`
+---@field height? number default: `1.0`
 
-    SetTextFont(font or 0)
-    SetTextScale(scale or 1.0, scale or 1.0)
+---Draws text onto the screen in 2D space for a single frame.
+---@param params DrawText2DParams
+function DrawText2D(params)
+    local text             = params.text
+    local coords           = params.coords
+    local scale            = params.scale or 0.35
+    local font             = params.font or 4
+    local color            = params.color or vec4(255, 255, 255, 255)
+    local width            = params.width or 1.0
+    local height           = params.height or 1.0
+    local enableDropShadow = params.enableDropShadow or false
+    local enableOutline    = params.enableOutline or false
 
-    if color and type(color) == "table" and color.r and color.g and color.b and color.a then
-        SetTextColour(color.r, color.g, color.b, color.a)
-    else
-        SetTextColour(255, 255, 255, 255)
-    end
+    SetTextScale(scale, scale)
+    SetTextFont(font)
+    SetTextColour(math.floor(color.r), math.floor(color.g), math.floor(color.b), math.floor(color.a))
+    if enableDropShadow then SetTextDropShadow() end
+    if enableOutline then SetTextOutline() end
 
-    if shadow then SetTextDropShadow() end
-    if outline then SetTextOutline() end
-    if right then SetTextRightJustify(true) end
-    SetTextJustification(justify or 0)
-    SetTextWrap(0.0, 1.0)
-    BeginTextCommandDisplayText("STRING")
+    SetTextCentre(true)
+    BeginTextCommandDisplayText('STRING')
     AddTextComponentSubstringPlayerName(text)
-    EndTextCommandDisplayText(x, y)
+    EndTextCommandDisplayText(coords.x - width / 2, coords.y - height / 2 + 0.005)
 end
 
-exports('DrawText', DrawText)
+---@class DrawText3DParams : DrawTextParams
+---@field coords vector3
+---@field disableDrawRect? boolean
+---@field scale? integer | vector2 default: `vec2(0.35,0.35)`
+
+---Draws text onto the screen in 3D space for a single frame.
+---@param params DrawText3DParams
+function DrawText3D(params) -- luacheck: ignore
+    local isScaleparamANumber = type(params.scale) == "number"
+    local text                = params.text
+    local coords              = params.coords
+    local scale               = (isScaleparamANumber and vec2(params.scale, params.scale)) or params.scale or vec2(0.35, 0.35)
+    local color               = params.color or vec4(255, 255, 255, 255)
+    local enableDropShadow    = params.enableDropShadow or false
+    local enableOutline       = params.enableOutline or false
+
+    SetTextScale(scale.x, scale.y)
+    SetTextFont(params.font or 4)
+    SetTextColour(math.floor(color.r), math.floor(color.g), math.floor(color.b), math.floor(color.a))
+    if enableDropShadow then SetTextDropShadow() end
+    if enableOutline then SetTextOutline() end
+    SetTextCentre(true)
+    BeginTextCommandDisplayText('STRING')
+    AddTextComponentSubstringPlayerName(text)
+    SetDrawOrigin(coords.x, coords.y, coords.z, 0)
+    EndTextCommandDisplayText(0.0, 0.0)
+
+    if not params.disableDrawRect then DrawRect(0.0, 0.0125, 0.017 + (#text / 370), 0.03, 0, 0, 0, 75) end
+    ClearDrawOrigin()
+end
+
+exports('DrawText', DrawText2D)
+exports('DrawText2D', DrawText2D)
+exports('DrawText3D', DrawText3D)
