@@ -1,6 +1,6 @@
 # Scavenge & Survive → FiveM — tracker
 
-Tracks the port on public `VIRUXE/scavengesurvive-v`. Gameplay resources are C#. Behaviour comes from the MTA port. The way of working is `docs/process.md`.
+Tracks the port on public `VIRUXE/scavengesurvive-v`. Gameplay resources are C#. Behaviour comes from the MTA port. Every finished slice updates the commit, the docs, and the issues together. That rule is mandatory. The steps are `docs/process.md`.
 
 The gamemode resources are C# and live in `resources/[scavengesurvive]/`. They are started from `resources.cfg`. The project Lua (`player`, `game`, `vehicle`, `admin`, and the Lua `world`) has been removed after its behaviour was moved into `auth`, `character`, `data`, `staff`, `vehicles`, and `world`. Vendor resources (`oxmysql`, `ox_lib`, `[maps]`, vMenu) stay. The Discord bot stays the node resource.
 
