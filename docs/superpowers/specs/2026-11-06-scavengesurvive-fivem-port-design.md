@@ -102,6 +102,7 @@ These are the approved constraints, recorded so a later issue does not reopen th
 21. **`zone` widens from `varchar(8)` to `varchar(16)` on every zone column**, not only `loot_spawns` and `world_budget`. That is also `items.loot_zone`, `supply_drop_points.zone`, and `weapon_cache_points.zone`, plus `item_create`'s `DECLARE v_zone VARCHAR(8)`. `GRAPESEED` is 9, `STRAWBERRY` is 10, `CHAMBERLAIN` is 11. SA zone codes (`LS`, `SF`, `BC`, …) are not reused.
 22. **SQL goes through oxmysql. There is no `Db.Call`.** Owner decision 2026-11-06. The C# import is `lib/Server/MySql.cs`, the same job as `@oxmysql/lib/MySQL.lua`. Each server project compiles that file and calls `MySql.Query`, `Single`, `Scalar`, `Update`, `Insert`, `Prepare`, `Raw`, or `Transaction` with placeholders. No C# MySQL driver. No procedure wrapper. No `CALL` gate. The MTA procedures stay the behaviour to reimplement as statements. Spike S3 is cancelled. Where an older paragraph still says `Db.Call` is the only path, this decision wins.
 23. **A finished slice updates the commit, the docs, and the issues together.** Owner rule 2026-11-06. Mandatory. `AGENTS.md` states it for every session. The steps are `docs/process.md`. A slice left with only code, or only a comment on a stale issue, is not done.
+24. **A resource restarts alone, through qrcon. The FXServer process stays up.** Owner rule 2026-11-06. `qrcon 127.0.0.1:30120` runs `restart <resource>` for the one resource that changed. The password is `rcon_password` in gitignored `env.cfg`. Peers stay running. No `fxmanifest` `dependency` may stop or restart another resource. Start order stays the `ensure` lines. A convar read only at process start is not a reason to restart the process unless the owner asks.
 
 ## Proposed Design
 
@@ -161,7 +162,7 @@ Event names are the MTA names already shipped: `<subject><PastTenseVerb>` camelC
 private void OnPickup([FromSource] Player source, int itemId) { /* ids only */ }
 ```
 
-Start order is `server.cfg` `ensure` lines, which is also dependency order. `fxmanifest` `dependencies` fail the start if a peer is missing; they do not restart dependents. Same trade-off the MTA spec accepted.
+Start order is `server.cfg` `ensure` lines, which is also dependency order. A resource restarts alone through qrcon (decision 24). Do not add an `fxmanifest` `dependency` that stops or restarts a peer. Peers stay up.
 
 | Resource | Side | Owns | Key exports / events |
 |---|---|---|---|
@@ -491,7 +492,7 @@ There is no single FIFO queue to alert on. `lib.db` records `CALL` latency. Aler
 | Networked entity budget | Sync collapse | Alarm at 1,500 script entities. Loot must not be in that set. |
 | Origin / unset spawn | Loot roll or teleport false positive | Port the MTA spawn guard from the ADR 0001 correction: no proximity roll until the ped has a real position for at least a second, and not while it is still on the default spawn. |
 
-**Operations.** Nightly `mariadb-dump --single-transaction` plus binlog. System-versioned `items` (7 days), `accounts`, and `bans` cover disputes without a restore. Logs are stdout JSON from `logs`; a Loki/Grafana stack is optional and is the MTA `ops/` compose, not a FiveM feature. No GitHub Pages. Secrets (`mysql_connection_string`, any webhook) live in a file that is gitignored, same rule as MTA `local.settings.xml` and the spike's `env.cfg`. Deploys are a restart at low population. `refresh` is not the prod deploy. OneSync slot cost is the Cfx subscription above 48 players.
+**Operations.** Nightly `mariadb-dump --single-transaction` plus binlog. System-versioned `items` (7 days), `accounts`, and `bans` cover disputes without a restore. Logs are stdout JSON from `logs`; a Loki/Grafana stack is optional and is the MTA `ops/` compose, not a FiveM feature. No GitHub Pages. Secrets (`mysql_connection_string`, any webhook) live in a file that is gitignored, same rule as MTA `local.settings.xml` and the spike's `env.cfg`. A resource change is `restart <resource>` through qrcon. The FXServer process stays up (decision 24). `refresh` is not the prod deploy. OneSync slot cost is the Cfx subscription above 48 players.
 
 **NUI budget.** One inventory page, opened on a key, not per frame. HUD bars update from `characterStatsSynced` at at most 2 Hz, not every tick, drawn in C#. The "F Cook" hint is the same C# draw. Target: the NUI focus is off during a fight. No browser left open to draw a health bar.
 
@@ -802,7 +803,7 @@ Covered in [Security and privacy](#security-and-privacy) and the anti-spoof tabl
 
 ## Rollout Plan
 
-There are no feature flags in the MTA port and none are added here. A milestone is playable or it is not started. Prod is one server. Rollback of a bad resource is `ensure` of the previous git revision and a restart; the database is ahead of the code only when a procedure changed, so a procedure change ships in the same revision as its callers and the rollback is "restore the dump taken before that revision". Player data is not migrated from MTA or from the spike.
+There are no feature flags in the MTA port and none are added here. A milestone is playable or it is not started. Prod is one server. Rollback of a bad resource is the previous git revision of that resource, then qrcon `restart` of that resource only. The database is ahead of the code only when a procedure changed, so a procedure change ships in the same revision as its callers and the rollback is "restore the dump taken before that revision". Player data is not migrated from MTA or from the spike.
 
 Order is M0 through M8 below. Do not start M2 until S3 (the `CALL` probe) is written into `docs/` as a result. Do not start M4 PvP until S2 (the pistol does no native damage) is written down.
 

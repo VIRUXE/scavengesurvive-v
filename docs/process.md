@@ -22,6 +22,14 @@ Do not commit code and leave the issue or the docs for later. Do not edit an iss
 
 A `.cs` change ships with the rebuilt `client.net.dll` and `server.net.dll` beside `fxmanifest.lua`, in that same commit.
 
+## Resource reloads
+
+Do not restart the FXServer process. A change to one resource is one qrcon command, `restart <resource>`, to `127.0.0.1:30120`. The password is `rcon_password` in gitignored `env.cfg`. Do not print it.
+
+Peers stay up. Do not restart a category or a second resource because the first one changed. A resource must start again on its own and must not start or stop another resource. Do not add an `fxmanifest` `dependency` that stops or restarts a peer. Start order stays the `ensure` lines in `server.cfg` and `resources.cfg`.
+
+A convar the process reads only at startup is not applied by a resource restart. Leave the process up unless the owner asks for a process restart.
+
 ## What stays out of git
 
 `env.cfg` holds `mysql_connection_string`, `sv_licenseKey`, and `discord_bot_token`. It is gitignored. Do not commit those values, and do not paste them into issues, docs, or commit messages.
