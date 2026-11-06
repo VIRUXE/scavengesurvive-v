@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CitizenFX.Core;
 using CitizenFX.Core.Native;
@@ -11,17 +10,41 @@ namespace Server
 {
     public class Main : ServerScript
     {
-        static readonly Regex Email = new Regex(@"^[\w_.-]+@[\w_.-]+\.[\w]{2,6}$", RegexOptions.Compiled);
-
         public Main()
         {
             EventHandlers["playerConnecting"] += new Action<Player, string, dynamic, dynamic>(OnConnecting);
             EventHandlers["playerJoining"] += new Action<Player, string>(OnJoining);
             EventHandlers["playerDropped"] += new Action<Player, string>(OnDropped);
             EventHandlers["player:spawned"] += new Action<Player>(OnSpawned);
+            Tick += Pump;
             API.RegisterCommand("authcapture", new Action<int, List<object>, string>(OnCapture), true);
             API.RegisterCommand("authrecord", new Action<int, List<object>, string>(OnRecord), true);
-            Debug.WriteLine("auth server started. capture on playerConnecting.");
+            API.RegisterCommand("authpass", new Action<int, List<object>, string>(OnPass), true);
+            Exports.Add("getAccountId", new Func<string, object>(GetAccountId));
+            Exports.Add("getAdminLevel", new Func<string, object>(GetAdminLevel));
+            Debug.WriteLine("auth server started. card on playerConnecting.");
+        }
+
+        async Task Pump()
+        {
+            MainThread.Drain();
+            await Delay(50);
+        }
+
+        static object GetAccountId(string source)
+        {
+            Session session = Sessions.Get(source);
+            if (session == null || !session.HasAccount || session.AccountId <= 0)
+                return null;
+            return session.AccountId;
+        }
+
+        static object GetAdminLevel(string source)
+        {
+            Session session = Sessions.Get(source);
+            if (session == null || !session.HasAccount)
+                return null;
+            return session.AdminLevel;
         }
 
         // FiveM requires one tick after defer before update, presentCard, or done.
@@ -53,7 +76,7 @@ namespace Server
                 Note("session.connected", ConnectedFields(session));
                 deferrals.update("Checking your account status...");
                 await Delay(0);
-                Present(deferrals, source, null, null, null);
+                Present(deferrals, source, null, null);
             }
             catch (Exception ex)
             {
@@ -137,6 +160,35 @@ namespace Server
             Debug.WriteLine("[auth] authrecord " + line);
         }
 
+        async void OnPass(int source, List<object> args, string raw)
+        {
+            string line = null;
+            try
+            {
+                Accounts.Probe(result => line = result);
+                for (int i = 0; i < 200 && line == null; i++)
+                    await Delay(100);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] authpass failed: " + ex.GetType().Name);
+                return;
+            }
+
+            if (line == null)
+            {
+                Debug.WriteLine("[auth] authpass failed step=timeout");
+                Accounts.Forget("f017-probe");
+                MySql.Update(
+                    "DELETE FROM accounts WHERE name = ?",
+                    new object[] { "f017a" },
+                    new Action<dynamic>(unused => { }));
+                return;
+            }
+
+            Debug.WriteLine("[auth] authpass " + line);
+        }
+
         static Dictionary<string, object> ConnectedFields(Session session)
         {
             var fields = new Dictionary<string, object>();
@@ -204,180 +256,201 @@ namespace Server
         {
             string source = player.Handle;
             Session session = Sessions.Get(source);
-            if (session != null && session.HasAccount && session.Spawned)
-            {
-                int ped = API.GetPlayerPed(source);
-                Vector3 coords = API.GetEntityCoords(ped);
-                string json = string.Format(CultureInfo.InvariantCulture, "{{\"x\":{0},\"y\":{1},\"z\":{2}}}", coords.X, coords.Y, coords.Z);
-                MySql.Update(
-                    "UPDATE accounts SET last_position = ? WHERE id = ?",
-                    new object[] { json, session.AccountId },
-                    new Action<dynamic>(unused => { }));
-            }
             if (session != null)
                 Debug.WriteLine("(" + source + ") " + session.Name + " dropped");
             Sessions.End(source);
         }
 
-        void Present(dynamic deferrals, string source, string message, string username, string password)
+        void Present(dynamic deferrals, string source, string message, string name)
         {
-            deferrals.presentCard(Card(message, username, password), new Action<dynamic, string>((data, raw) =>
+            deferrals.presentCard(Card(message, name), new Action<dynamic, string>((data, raw) =>
             {
                 if (data == null)
                 {
-                    deferrals.done("Connection closed.");
+                    Close(deferrals, source, "Connection closed.");
                     return;
                 }
 
-                string action = Convert.ToString(data.action);
-                string nextUser = Convert.ToString(data.username);
-                string nextPass = Convert.ToString(data.password);
-
-                if (action == "recover")
-                {
-                    PresentRecovery(deferrals, source, null);
-                    return;
-                }
-
+                string action = CardField(data, "action");
+                string nextName = CardField(data, "name");
+                string nextPass = CardField(data, "password");
                 if (action != "login" && action != "register")
                 {
-                    deferrals.done("Connection closed.");
+                    Close(deferrals, source, "Connection closed.");
                     return;
                 }
 
-                if (string.IsNullOrEmpty(nextUser) || string.IsNullOrEmpty(nextPass))
+                if (string.IsNullOrEmpty(nextName) || string.IsNullOrEmpty(nextPass))
                 {
-                    Present(deferrals, source, "Username and password cannot be empty.", nextUser, nextPass);
+                    Present(deferrals, source, "Name and password cannot be empty.", nextName);
                     return;
                 }
 
+                try
+                {
+                    deferrals.update("Checking your account...");
+                }
+                catch (Exception)
+                {
+                }
+
+                Func<bool> present = () => Sessions.Get(source) != null;
+                Action<AccountResult> after = result => OnAccount(deferrals, source, action, nextName, result);
                 if (action == "login")
-                    Login(deferrals, source, nextUser, nextPass);
+                {
+                    Session session = Sessions.Get(source);
+                    string license = null;
+                    if (session != null && session.Identifiers != null)
+                        session.Identifiers.TryGetValue("license", out license);
+                    Accounts.Login(license ?? source, nextName, nextPass, IpOf(session), present, after);
+                }
                 else
-                    BeginRegister(deferrals, source, nextUser, nextPass);
+                {
+                    Session session = Sessions.Get(source);
+                    Accounts.Register(nextName, nextPass, IpOf(session), present, after);
+                }
             }));
         }
 
-        void Login(dynamic deferrals, string source, string username, string password)
+        void OnAccount(dynamic deferrals, string source, string action, string name, AccountResult result)
         {
-            MySql.Single(
-                "SELECT id, username, email, last_position FROM accounts WHERE username = ?",
-                new object[] { username },
-                new Action<dynamic>(row =>
-                {
-                    if (row == null)
-                    {
-                        Present(deferrals, source, "Account not found. Please try again or register.", username, password);
-                        return;
-                    }
-
-                    int id = MySql.Int(row, "id");
-                    MySql.Scalar(
-                        "SELECT IF(SHA2(?, 256) = password, 1, 0) FROM accounts WHERE id = ?",
-                        new object[] { password, id },
-                        new Action<dynamic>(match =>
-                        {
-                            if (Convert.ToInt32(match) != 1)
-                            {
-                                Present(deferrals, source, "Incorrect password.", username, password);
-                                return;
-                            }
-
-                            Accept(deferrals, source, id, MySql.Text(row, "username"), MySql.Text(row, "email"), MySql.Text(row, "last_position"));
-                        }));
-                }));
-        }
-
-        void BeginRegister(dynamic deferrals, string source, string username, string password)
-        {
-            MySql.Scalar(
-                "SELECT id FROM accounts WHERE username = ?",
-                new object[] { username },
-                new Action<dynamic>(existing =>
-                {
-                    if (existing != null && Convert.ToString(existing) != "")
-                    {
-                        Present(deferrals, source, "This username is already registered. Please login or register with a different username.", username, password);
-                        return;
-                    }
-
-                    deferrals.presentCard(RegisterCard(), new Action<dynamic, string>((data, raw) =>
-                    {
-                        if (data == null)
-                        {
-                            deferrals.done("Connection closed.");
-                            return;
-                        }
-
-                        string email = Convert.ToString(data.email);
-                        if (string.IsNullOrEmpty(email))
-                        {
-                            Present(deferrals, source, "E-mail cannot be empty.", username, password);
-                            return;
-                        }
-
-                        MySql.Insert(
-                            "INSERT INTO accounts (username, password, email) VALUES (?, SHA2(?, 256), ?)",
-                            new object[] { username, password, email },
-                            new Action<dynamic>(accountId =>
-                            {
-                                if (accountId == null || Convert.ToString(accountId) == "")
-                                {
-                                    Present(deferrals, source, "An error occurred during registration. The username might be taken.", username, password);
-                                    return;
-                                }
-
-                                Accept(deferrals, source, Convert.ToInt32(accountId), username, email, null);
-                            }));
-                    }));
-                }));
-        }
-
-        void PresentRecovery(dynamic deferrals, string source, string message)
-        {
-            deferrals.presentCard(RecoveryCard(message), new Action<dynamic, string>((data, raw) =>
+            if (Sessions.Get(source) == null)
             {
-                if (data == null)
+                try
                 {
                     deferrals.done("Connection closed.");
-                    return;
                 }
-
-                string action = Convert.ToString(data.action);
-                if (action == "back_to_welcome")
+                catch (Exception)
                 {
-                    Present(deferrals, source, null, null, null);
-                    return;
                 }
 
-                string email = Convert.ToString(data.email);
-                if (string.IsNullOrEmpty(email))
-                {
-                    PresentRecovery(deferrals, source, "E-mail address cannot be blank.");
-                    return;
-                }
+                return;
+            }
 
-                if (!Email.IsMatch(email))
-                {
-                    PresentRecovery(deferrals, source, "Please enter a valid e-mail address.");
-                    return;
-                }
+            string code = result == null ? "DB_ERROR" : result.Code;
+            if (result != null && result.Ok && code == "OK")
+            {
+                Accept(deferrals, source, result.AccountId, result.Name, result.AdminLevel, action);
+                return;
+            }
 
-                deferrals.presentCard(
-                    "{\"type\":\"AdaptiveCard\",\"version\":\"1.3\",\"body\":[" +
-                    "{\"type\":\"TextBlock\",\"text\":\"Password Recovery\",\"weight\":\"Bolder\",\"size\":\"Medium\"}," +
-                    "{\"type\":\"TextBlock\",\"wrap\":true,\"text\":\"If an account with that email exists, a password recovery link has been sent.\"}" +
-                    "],\"actions\":[{\"type\":\"Action.Submit\",\"title\":\"Close\"}]}",
-                    new Action<dynamic, string>((done, rawDone) => deferrals.done("Connection closed.")));
-            }));
+            var fields = new Dictionary<string, object>();
+            fields["player"] = source;
+            fields["ok"] = false;
+            fields["code"] = code ?? "DB_ERROR";
+            fields["name"] = name ?? "";
+            if (result != null && result.AccountId > 0)
+                fields["account_id"] = result.AccountId;
+            if (result != null && result.Attempts > 0)
+                fields["attempts"] = result.Attempts;
+
+            if (code == "BAD_PASSWORD" && result.Attempts < Accounts.MaxAttempts)
+            {
+                Note("session.refused", fields);
+                Present(deferrals, source, "Incorrect password! " + result.Attempts.ToString(CultureInfo.InvariantCulture) + " out of 5 tries", name);
+                return;
+            }
+
+            if (code == "BAD_PASSWORD" || code == "TOO_MANY_ATTEMPTS")
+            {
+                fields["reason"] = "dialogLeft";
+                Note("session.kicked", fields);
+                Close(deferrals, source, "Left without logging in");
+                return;
+            }
+
+            if (code == "INACTIVE")
+            {
+                fields["reason"] = "inactive";
+                Note("session.refused", fields);
+                Close(deferrals, source, "Account inactive");
+                return;
+            }
+
+            if (code == "DB_ERROR" || code == "GONE")
+            {
+                fields["reason"] = "accountLoadFailed";
+                Note("session.kicked", fields);
+                Close(deferrals, source, "Account load failed");
+                return;
+            }
+
+            Note("session.refused", fields);
+            Present(deferrals, source, CardMessage(code), name);
         }
 
-        void Accept(dynamic deferrals, string source, int id, string username, string email, string lastPosition)
+        static string CardMessage(string code)
+        {
+            if (code == "BAD_NAME")
+                return "Name must be 1 to 22 letters, digits, or punctuation.";
+            if (code == "WEAK_PASSWORD")
+                return "Password must be between 4 and 32 characters.";
+            if (code == "EXISTS")
+                return "This name is already registered.";
+            if (code == "NO_ACCOUNT")
+                return "Account not found.";
+            return "Account load failed";
+        }
+
+        static string IpOf(Session session)
+        {
+            if (session == null || session.Identifiers == null)
+                return null;
+            string ip;
+            session.Identifiers.TryGetValue("ip", out ip);
+            return ip;
+        }
+
+        static string CardField(dynamic data, string key)
+        {
+            if (data == null || key == null)
+                return "";
+
+            IDictionary<string, object> dict = data as IDictionary<string, object>;
+            if (dict != null)
+            {
+                object value;
+                if (!dict.TryGetValue(key, out value) || value == null)
+                    return "";
+                return Convert.ToString(value);
+            }
+
+            try
+            {
+                object value = data[key];
+                return value == null ? "" : Convert.ToString(value);
+            }
+            catch (Exception)
+            {
+                return "";
+            }
+        }
+
+        void Close(dynamic deferrals, string source, string reason)
+        {
+            Sessions.End(source);
+            try
+            {
+                deferrals.done(reason);
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        void Accept(dynamic deferrals, string source, int id, string username, int adminLevel, string method)
         {
             Session session = Sessions.Get(source);
             if (session == null)
             {
-                deferrals.done("Connection closed.");
+                try
+                {
+                    deferrals.done("Connection closed.");
+                }
+                catch (Exception)
+                {
+                }
+
                 return;
             }
 
@@ -394,23 +467,30 @@ namespace Server
                     fields["ok"] = false;
                     fields["code"] = "write_failed";
                     Note("session.recorded", fields);
-                    Present(deferrals, source, "Could not store this sign-in. Try again.", username, null);
+                    Present(deferrals, source, "Could not store this sign-in. Try again.", username);
                     return;
                 }
 
                 session.HasAccount = true;
                 session.AccountId = id;
                 session.Username = username;
-                session.Email = email;
-                session.LastPosition = string.IsNullOrEmpty(lastPosition) ? null : lastPosition;
+                session.AdminLevel = adminLevel;
                 fields["ok"] = true;
                 fields["code"] = "recorded";
                 Note("session.recorded", fields);
+                var authed = new Dictionary<string, object>();
+                authed["player"] = source;
+                authed["account_id"] = id;
+                authed["name"] = username ?? "";
+                authed["method"] = method == "register" ? "register" : "login";
+                authed["ok"] = true;
+                authed["code"] = "OK";
+                Note("session.authenticated", authed);
                 deferrals.done();
             }));
         }
 
-        static string Card(string message, string username, string password)
+        static string Card(string message, string name)
         {
             var body = new StringBuilder();
             body.Append("{\"type\":\"AdaptiveCard\",\"version\":\"1.3\",\"body\":[");
@@ -419,35 +499,12 @@ namespace Server
             body.Append("{\"type\":\"TextBlock\",\"wrap\":true");
             if (!string.IsNullOrEmpty(message)) body.Append(",\"color\":\"Attention\"");
             body.Append(",\"text\":").Append(Json(message ?? "Please login or register to continue.")).Append("},");
-            body.Append("{\"type\":\"Input.Text\",\"id\":\"username\",\"label\":\"Username\",\"placeholder\":\"Enter your username\",\"value\":").Append(Json(username ?? "")).Append("},");
-            body.Append("{\"type\":\"Input.Text\",\"id\":\"password\",\"label\":\"Password\",\"placeholder\":\"Enter your password\",\"style\":\"password\",\"value\":").Append(Json(password ?? "")).Append("}");
+            body.Append("{\"type\":\"Input.Text\",\"id\":\"name\",\"label\":\"Name\",\"placeholder\":\"Enter your name\",\"value\":").Append(Json(name ?? "")).Append("},");
+            body.Append("{\"type\":\"Input.Text\",\"id\":\"password\",\"label\":\"Password\",\"placeholder\":\"Enter your password\",\"style\":\"password\"}");
             body.Append("],\"actions\":[");
             body.Append("{\"type\":\"Action.Submit\",\"title\":\"Login\",\"data\":{\"action\":\"login\"}},");
-            body.Append("{\"type\":\"Action.Submit\",\"title\":\"Register\",\"data\":{\"action\":\"register\"}},");
-            body.Append("{\"type\":\"Action.Submit\",\"title\":\"Forgot Password?\",\"data\":{\"action\":\"recover\"}}");
+            body.Append("{\"type\":\"Action.Submit\",\"title\":\"Register\",\"data\":{\"action\":\"register\"}}");
             body.Append("]}");
-            return body.ToString();
-        }
-
-        static string RegisterCard()
-        {
-            return "{\"type\":\"AdaptiveCard\",\"version\":\"1.3\",\"body\":[" +
-                "{\"type\":\"TextBlock\",\"text\":\"Registration\",\"weight\":\"Bolder\",\"size\":\"Medium\"}," +
-                "{\"type\":\"Input.Text\",\"id\":\"email\",\"label\":\"E-mail\",\"placeholder\":\"Enter your e-mail\"}" +
-                "],\"actions\":[{\"type\":\"Action.Submit\",\"title\":\"Complete Registration\"}]}";
-        }
-
-        static string RecoveryCard(string message)
-        {
-            var body = new StringBuilder();
-            body.Append("{\"type\":\"AdaptiveCard\",\"version\":\"1.3\",\"body\":[");
-            body.Append("{\"type\":\"TextBlock\",\"text\":\"Password Recovery\",\"weight\":\"Bolder\",\"size\":\"Medium\"},");
-            if (!string.IsNullOrEmpty(message))
-                body.Append("{\"type\":\"TextBlock\",\"wrap\":true,\"color\":\"Attention\",\"text\":").Append(Json(message)).Append("},");
-            body.Append("{\"type\":\"Input.Text\",\"id\":\"email\",\"label\":\"E-mail\",\"placeholder\":\"Enter your e-mail address\"}");
-            body.Append("],\"actions\":[");
-            body.Append("{\"type\":\"Action.Submit\",\"title\":\"Submit\",\"data\":{\"action\":\"submit_recovery\"}},");
-            body.Append("{\"type\":\"Action.Submit\",\"title\":\"Back\",\"data\":{\"action\":\"back_to_welcome\"}}]}");
             return body.ToString();
         }
 

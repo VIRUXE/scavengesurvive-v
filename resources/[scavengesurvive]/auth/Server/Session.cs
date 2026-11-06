@@ -10,8 +10,7 @@ namespace Server
         public string[] Tokens;
         public int AccountId;
         public string Username;
-        public string Email;
-        public string LastPosition;
+        public int AdminLevel;
         public bool HasAccount;
         public bool Spawned;
     }
