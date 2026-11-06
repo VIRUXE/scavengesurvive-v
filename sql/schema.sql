@@ -1,13 +1,58 @@
--- F004. Unchanged tables, triggers, and events from the MTA dump, plus the
--- MTA-shaped parents their foreign keys, triggers, and events require.
--- MariaDB 13.1.1. Database `ssv`. No procedures. No seeds. No player rows.
--- Parents still in the MTA column shape, for F005 to rewrite: bans, item_types,
--- items, loot_spawns, vehicle_spawns, vehicles, world_items_pos.
--- The 2025 login tables accounts, account_identifiers, and account_tokens are
--- still in the live database and are not in this dump.
+-- F005. Live MariaDB 13.1.1 database `ssv`, dumped after the column delta.
+-- No procedures. No seeds. No player rows.
+-- `bucket` replaces `dimension`. `interior`, `serial`, and `last_serial` are gone.
+-- `characters.appearance` is JSON. `characters.wounds` stays and is not flushed.
+-- `vehicles.model` is INT UNSIGNED. Every zone column is varchar(16).
+-- `item_types.model` stays in the table and is unused at runtime.
+-- Identifier rows are `account_identifiers`. Tokens are `account_tokens`.
+-- `ban_identifiers.type` includes `token`. `connection_identifiers` holds the
+-- set captured for one `connection_log` row. `connection_log.ip` stays varchar(45).
+-- `vehicle_spawns` and `vehicles` had no interior or dimension column.
 -- Change the live database, then dump again. There are no migration files.
 
 SET FOREIGN_KEY_CHECKS = 0;
+
+CREATE TABLE IF NOT EXISTS `account_identifiers` (
+  `account_id` int(11) NOT NULL,
+  `type` enum('steam','discord','xbl','live','license','license2','fivem','ip') NOT NULL,
+  `value` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `last_used` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `times_used` int(11) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`account_id`,`type`),
+  UNIQUE KEY `uq_account_identifiers_type_value` (`type`,`value`),
+  CONSTRAINT `fk_account_identifiers_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `account_tokens` (
+  `account_id` int(11) NOT NULL,
+  `token` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `last_used` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `times_used` int(11) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`account_id`,`token`),
+  CONSTRAINT `fk_account_tokens_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `accounts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(24) NOT NULL,
+  `password_hash` char(60) NOT NULL,
+  `admin_level` tinyint(4) NOT NULL DEFAULT 0,
+  `lang` varchar(8) DEFAULT NULL,
+  `tooltips` tinyint(1) NOT NULL DEFAULT 1,
+  `registered_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `last_login_at` datetime DEFAULT NULL,
+  `last_ip` varchar(45) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `warnings` tinyint(4) NOT NULL DEFAULT 0,
+  `muted` tinyint(1) NOT NULL DEFAULT 0,
+  `mute_until` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_accounts_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci WITH SYSTEM VERSIONING;
 
 CREATE TABLE IF NOT EXISTS `anticheat_field_logs` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
@@ -40,12 +85,20 @@ CREATE TABLE IF NOT EXISTS `anticheat_traps` (
   PRIMARY KEY (`spot`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
+CREATE TABLE IF NOT EXISTS `ban_identifiers` (
+  `ban_id` int(11) NOT NULL,
+  `type` enum('steam','discord','xbl','live','license','license2','fivem','ip','token') NOT NULL,
+  `value` varchar(255) NOT NULL,
+  PRIMARY KEY (`ban_id`,`type`,`value`),
+  KEY `ix_ban_identifiers_lookup` (`type`,`value`),
+  CONSTRAINT `fk_ban_identifiers_ban` FOREIGN KEY (`ban_id`) REFERENCES `bans` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
 CREATE TABLE IF NOT EXISTS `bans` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `account_id` int(11) DEFAULT NULL,
   `name` varchar(24) NOT NULL,
   `ip` varchar(45) DEFAULT NULL,
-  `serial` char(32) DEFAULT NULL,
   `reason` varchar(128) NOT NULL DEFAULT '',
   `by_account_id` int(11) DEFAULT NULL,
   `by_name` varchar(24) NOT NULL DEFAULT 'Server',
@@ -55,7 +108,6 @@ CREATE TABLE IF NOT EXISTS `bans` (
   PRIMARY KEY (`id`),
   KEY `ix_bans_name` (`name`,`active`),
   KEY `ix_bans_ip` (`ip`,`active`),
-  KEY `ix_bans_serial` (`serial`,`active`),
   KEY `ix_bans_expiry` (`active`,`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci WITH SYSTEM VERSIONING;
 
@@ -67,6 +119,64 @@ CREATE TABLE IF NOT EXISTS `bug_reports` (
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `ix_bug_reports_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `characters` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `account_id` int(11) NOT NULL,
+  `alive` tinyint(1) NOT NULL DEFAULT 1,
+  `alive_account` int(11) GENERATED ALWAYS AS (if(`alive` = 1,`account_id`,NULL)) STORED,
+  `appearance` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`appearance`)),
+  `hp` float NOT NULL DEFAULT 100,
+  `armour` float NOT NULL DEFAULT 0,
+  `food` float NOT NULL DEFAULT 80,
+  `bleed` float NOT NULL DEFAULT 0,
+  `wounds` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT '[]' CHECK (json_valid(`wounds`)),
+  `skills` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT '[]' CHECK (json_valid(`skills`)),
+  `infection` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `drugs` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT '[]' CHECK (json_valid(`drugs`)),
+  `x` float NOT NULL,
+  `y` float NOT NULL,
+  `z` float NOT NULL,
+  `rz` float NOT NULL DEFAULT 0,
+  `bucket` int(11) NOT NULL DEFAULT 0,
+  `radio_freq` float NOT NULL DEFAULT 98.12,
+  `chat_mode` tinyint(4) NOT NULL DEFAULT 0,
+  `inventory_container_id` int(11) DEFAULT NULL,
+  `spawned_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `died_at` datetime DEFAULT NULL,
+  `death_cause` varchar(32) DEFAULT NULL,
+  `killer_char_id` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_characters_alive_account` (`alive_account`),
+  KEY `ix_characters_account` (`account_id`),
+  CONSTRAINT `fk_characters_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
+  CONSTRAINT `chk_characters_appearance` CHECK (json_valid(`appearance`)),
+  CONSTRAINT `chk_characters_wounds` CHECK (json_valid(`wounds`)),
+  CONSTRAINT `chk_characters_skills` CHECK (json_valid(`skills`)),
+  CONSTRAINT `chk_characters_drugs` CHECK (json_valid(`drugs`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `connection_identifiers` (
+  `log_id` bigint(20) NOT NULL,
+  `type` enum('steam','discord','xbl','live','license','license2','fivem','ip') NOT NULL,
+  `value` varchar(255) NOT NULL,
+  PRIMARY KEY (`log_id`,`type`),
+  KEY `ix_connection_identifiers_lookup` (`type`,`value`),
+  CONSTRAINT `fk_connection_identifiers_log` FOREIGN KEY (`log_id`) REFERENCES `connection_log` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `connection_log` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `account_id` int(11) DEFAULT NULL,
+  `name` varchar(24) NOT NULL,
+  `ip` varchar(45) DEFAULT NULL,
+  `joined_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `left_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_connection_log_ip` (`ip`),
+  KEY `ix_connection_log_account_joined` (`account_id`,`joined_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 CREATE TABLE IF NOT EXISTS `containers` (
@@ -116,14 +226,13 @@ CREATE TABLE IF NOT EXISTS `items` (
   `rz` float DEFAULT NULL,
   `ground_nx` float DEFAULT NULL,
   `ground_ny` float DEFAULT NULL,
-  `interior` tinyint(4) DEFAULT NULL,
-  `dimension` int(11) DEFAULT NULL,
+  `bucket` int(11) DEFAULT NULL,
   `container_id` int(11) DEFAULT NULL,
   `slot` tinyint(4) DEFAULT NULL,
   `holder_char_id` int(11) DEFAULT NULL,
   `holder_kind` enum('held','holster','bag','hat','mask','armour','parachute') DEFAULT NULL,
   `loot_spawn_id` int(11) DEFAULT NULL,
-  `loot_zone` varchar(8) DEFAULT NULL,
+  `loot_zone` varchar(16) DEFAULT NULL,
   `despawn_at` datetime DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -159,14 +268,33 @@ CREATE TABLE IF NOT EXISTS `loot_spawns` (
   `table_name` varchar(32) NOT NULL,
   `weight` float NOT NULL,
   `size` tinyint(4) NOT NULL DEFAULT -1,
-  `interior` tinyint(4) NOT NULL DEFAULT 0,
-  `dimension` int(11) NOT NULL DEFAULT 0,
-  `zone` varchar(8) NOT NULL,
+  `bucket` int(11) NOT NULL DEFAULT 0,
+  `zone` varchar(16) NOT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   `pos` point NOT NULL,
   PRIMARY KEY (`id`),
   SPATIAL KEY `sp_loot_spawns_pos` (`pos`),
   KEY `ix_loot_spawns_zone` (`zone`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `reports` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(24) NOT NULL,
+  `reason` varchar(128) NOT NULL,
+  `type` varchar(10) NOT NULL DEFAULT 'PLY NAME',
+  `x` float DEFAULT NULL,
+  `y` float DEFAULT NULL,
+  `z` float DEFAULT NULL,
+  `bucket` int(11) DEFAULT NULL,
+  `info` varchar(128) DEFAULT NULL,
+  `by_name` varchar(24) NOT NULL DEFAULT 'Server',
+  `by_account_id` int(11) DEFAULT NULL,
+  `read_at` datetime DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_reports_active` (`active`,`created_at`),
+  KEY `ix_reports_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 CREATE TABLE IF NOT EXISTS `settings` (
@@ -189,6 +317,18 @@ CREATE TABLE IF NOT EXISTS `staff_actions` (
   KEY `ix_staff_actions_actor` (`actor_account_id`,`created_at`),
   KEY `ix_staff_actions_target` (`target_name`,`created_at`),
   KEY `ix_staff_actions_action` (`action`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `supply_drop_points` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(32) NOT NULL,
+  `x` float NOT NULL,
+  `y` float NOT NULL,
+  `z` float NOT NULL,
+  `zone` varchar(16) NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_supply_drop_points_used` (`used_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 CREATE TABLE IF NOT EXISTS `vehicle_events` (
@@ -238,7 +378,7 @@ CREATE TABLE IF NOT EXISTS `vehicles` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `spawn_id` int(11) DEFAULT NULL,
   `type_uname` varchar(32) NOT NULL,
-  `model` smallint(6) NOT NULL,
+  `model` int(10) unsigned NOT NULL,
   `x` float NOT NULL,
   `y` float NOT NULL,
   `z` float NOT NULL,
@@ -266,11 +406,32 @@ CREATE TABLE IF NOT EXISTS `vehicles` (
   CONSTRAINT `fk_vehicles_trailer` FOREIGN KEY (`trailer_id`) REFERENCES `vehicles` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
+CREATE TABLE IF NOT EXISTS `weapon_cache_points` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `x` float NOT NULL,
+  `y` float NOT NULL,
+  `z` float NOT NULL,
+  `zone` varchar(16) NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_weapon_cache_points_used` (`used_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
 CREATE TABLE IF NOT EXISTS `whitelist` (
   `name` varchar(24) NOT NULL,
   `added_by` varchar(24) NOT NULL DEFAULT 'Server',
   `added_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `world_budget` (
+  `category` varchar(16) NOT NULL,
+  `zone` varchar(16) NOT NULL,
+  `cap` int(11) NOT NULL,
+  `remainder` float NOT NULL DEFAULT 0,
+  `allowance` int(11) NOT NULL DEFAULT 0,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`category`,`zone`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 CREATE TABLE IF NOT EXISTS `world_crates` (
