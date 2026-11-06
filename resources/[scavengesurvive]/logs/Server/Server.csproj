@@ -47,7 +47,8 @@
   <ItemGroup>
     <Compile Include="Main.cs" />
     <Compile Include="..\Shared\**\*.cs" />
-<Compile Include="..\..\lib\Server\MySql.cs" />
+    <Compile Include="..\..\lib\Shared\LogShape.cs" />
+    <Compile Include="..\..\lib\Server\MySql.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
