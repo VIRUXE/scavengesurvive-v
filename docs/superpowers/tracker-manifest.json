@@ -1,0 +1,654 @@
+{
+  "epics": {
+    "M0": 1,
+    "M1": 2,
+    "M2": 3,
+    "M3": 4,
+    "M4": 5,
+    "M5": 6,
+    "M6": 7,
+    "M7": 8,
+    "M8": 9,
+    "Dropped": 10
+  },
+  "rows": {
+    "F001": {
+      "number": 11,
+      "parent": "M0"
+    },
+    "F002": {
+      "number": 12,
+      "parent": "M0"
+    },
+    "F003": {
+      "number": 13,
+      "parent": "M0"
+    },
+    "F004": {
+      "number": 14,
+      "parent": "M0"
+    },
+    "F005": {
+      "number": 15,
+      "parent": "M0"
+    },
+    "F006": {
+      "number": 16,
+      "parent": "M0"
+    },
+    "F007": {
+      "number": 17,
+      "parent": "M0"
+    },
+    "F008": {
+      "number": 18,
+      "parent": "M0"
+    },
+    "F009": {
+      "number": 19,
+      "parent": "M0"
+    },
+    "F010": {
+      "number": 20,
+      "parent": "M0"
+    },
+    "F011": {
+      "number": 21,
+      "parent": "M0"
+    },
+    "F012": {
+      "number": 22,
+      "parent": "M0"
+    },
+    "F013": {
+      "number": 23,
+      "parent": "M0"
+    },
+    "F014": {
+      "number": 24,
+      "parent": "M0"
+    },
+    "F015": {
+      "number": 25,
+      "parent": "M1"
+    },
+    "F016": {
+      "number": 26,
+      "parent": "M1"
+    },
+    "F017": {
+      "number": 27,
+      "parent": "M1"
+    },
+    "F018": {
+      "number": 28,
+      "parent": "M1"
+    },
+    "F019": {
+      "number": 29,
+      "parent": "M1"
+    },
+    "F020": {
+      "number": 30,
+      "parent": "M1"
+    },
+    "F021": {
+      "number": 31,
+      "parent": "M1"
+    },
+    "F022": {
+      "number": 32,
+      "parent": "M1"
+    },
+    "F023": {
+      "number": 33,
+      "parent": "M1"
+    },
+    "F024": {
+      "number": 34,
+      "parent": "M1"
+    },
+    "F025": {
+      "number": 35,
+      "parent": "M1"
+    },
+    "F026": {
+      "number": 36,
+      "parent": "M1"
+    },
+    "F027": {
+      "number": 37,
+      "parent": "M1"
+    },
+    "F028": {
+      "number": 38,
+      "parent": "M1"
+    },
+    "F029": {
+      "number": 39,
+      "parent": "M1"
+    },
+    "F030": {
+      "number": 40,
+      "parent": "M1"
+    },
+    "F031": {
+      "number": 41,
+      "parent": "M1"
+    },
+    "F032": {
+      "number": 42,
+      "parent": "M1"
+    },
+    "F033": {
+      "number": 43,
+      "parent": "M1"
+    },
+    "F034": {
+      "number": 44,
+      "parent": "M1"
+    },
+    "F035": {
+      "number": 45,
+      "parent": "M1"
+    },
+    "F036": {
+      "number": 46,
+      "parent": "M1"
+    },
+    "F037": {
+      "number": 47,
+      "parent": "M1"
+    },
+    "F038": {
+      "number": 48,
+      "parent": "M1"
+    },
+    "F039": {
+      "number": 49,
+      "parent": "M1"
+    },
+    "F040": {
+      "number": 50,
+      "parent": "M1"
+    },
+    "F041": {
+      "number": 51,
+      "parent": "M2"
+    },
+    "F042": {
+      "number": 52,
+      "parent": "M2"
+    },
+    "F043": {
+      "number": 53,
+      "parent": "M2"
+    },
+    "F044": {
+      "number": 54,
+      "parent": "M2"
+    },
+    "F045": {
+      "number": 55,
+      "parent": "M2"
+    },
+    "F046": {
+      "number": 56,
+      "parent": "M2"
+    },
+    "F047": {
+      "number": 57,
+      "parent": "M2"
+    },
+    "F048": {
+      "number": 58,
+      "parent": "M2"
+    },
+    "F049": {
+      "number": 59,
+      "parent": "M2"
+    },
+    "F050": {
+      "number": 60,
+      "parent": "M2"
+    },
+    "F051": {
+      "number": 61,
+      "parent": "M2"
+    },
+    "F052": {
+      "number": 62,
+      "parent": "M2"
+    },
+    "F053": {
+      "number": 63,
+      "parent": "M2"
+    },
+    "F054": {
+      "number": 64,
+      "parent": "M2"
+    },
+    "F055": {
+      "number": 65,
+      "parent": "M2"
+    },
+    "F056": {
+      "number": 66,
+      "parent": "M2"
+    },
+    "F057": {
+      "number": 67,
+      "parent": "M2"
+    },
+    "F058": {
+      "number": 68,
+      "parent": "M2"
+    },
+    "F059": {
+      "number": 69,
+      "parent": "M2"
+    },
+    "F060": {
+      "number": 70,
+      "parent": "M2"
+    },
+    "F061": {
+      "number": 71,
+      "parent": "M2"
+    },
+    "F062": {
+      "number": 72,
+      "parent": "M2"
+    },
+    "F063": {
+      "number": 73,
+      "parent": "M2"
+    },
+    "F064": {
+      "number": 74,
+      "parent": "M2"
+    },
+    "F065": {
+      "number": 75,
+      "parent": "M3"
+    },
+    "F066": {
+      "number": 76,
+      "parent": "M3"
+    },
+    "F067": {
+      "number": 77,
+      "parent": "M3"
+    },
+    "F068": {
+      "number": 78,
+      "parent": "M3"
+    },
+    "F069": {
+      "number": 79,
+      "parent": "M3"
+    },
+    "F070": {
+      "number": 80,
+      "parent": "M3"
+    },
+    "F071": {
+      "number": 81,
+      "parent": "M3"
+    },
+    "F072": {
+      "number": 82,
+      "parent": "M3"
+    },
+    "F073": {
+      "number": 83,
+      "parent": "M3"
+    },
+    "F074": {
+      "number": 84,
+      "parent": "M3"
+    },
+    "F075": {
+      "number": 85,
+      "parent": "M3"
+    },
+    "F076": {
+      "number": 86,
+      "parent": "M3"
+    },
+    "F077": {
+      "number": 87,
+      "parent": "M3"
+    },
+    "F078": {
+      "number": 88,
+      "parent": "M3"
+    },
+    "F079": {
+      "number": 89,
+      "parent": "M3"
+    },
+    "F080": {
+      "number": 90,
+      "parent": "M3"
+    },
+    "F081": {
+      "number": 91,
+      "parent": "M4"
+    },
+    "F082": {
+      "number": 92,
+      "parent": "M4"
+    },
+    "F083": {
+      "number": 93,
+      "parent": "M4"
+    },
+    "F084": {
+      "number": 94,
+      "parent": "M4"
+    },
+    "F085": {
+      "number": 95,
+      "parent": "M4"
+    },
+    "F086": {
+      "number": 96,
+      "parent": "M4"
+    },
+    "F087": {
+      "number": 97,
+      "parent": "M4"
+    },
+    "F088": {
+      "number": 98,
+      "parent": "M4"
+    },
+    "F089": {
+      "number": 99,
+      "parent": "M4"
+    },
+    "F090": {
+      "number": 100,
+      "parent": "M4"
+    },
+    "F091": {
+      "number": 101,
+      "parent": "M4"
+    },
+    "F092": {
+      "number": 102,
+      "parent": "M4"
+    },
+    "F093": {
+      "number": 103,
+      "parent": "M4"
+    },
+    "F094": {
+      "number": 104,
+      "parent": "M4"
+    },
+    "F095": {
+      "number": 105,
+      "parent": "M5"
+    },
+    "F096": {
+      "number": 106,
+      "parent": "M5"
+    },
+    "F097": {
+      "number": 107,
+      "parent": "M5"
+    },
+    "F098": {
+      "number": 108,
+      "parent": "M5"
+    },
+    "F099": {
+      "number": 109,
+      "parent": "M5"
+    },
+    "F100": {
+      "number": 110,
+      "parent": "M5"
+    },
+    "F101": {
+      "number": 111,
+      "parent": "M5"
+    },
+    "F102": {
+      "number": 112,
+      "parent": "M5"
+    },
+    "F103": {
+      "number": 113,
+      "parent": "M5"
+    },
+    "F104": {
+      "number": 114,
+      "parent": "M5"
+    },
+    "F105": {
+      "number": 115,
+      "parent": "M5"
+    },
+    "F106": {
+      "number": 116,
+      "parent": "M5"
+    },
+    "F107": {
+      "number": 117,
+      "parent": "M6"
+    },
+    "F108": {
+      "number": 118,
+      "parent": "M6"
+    },
+    "F109": {
+      "number": 119,
+      "parent": "M6"
+    },
+    "F110": {
+      "number": 120,
+      "parent": "M6"
+    },
+    "F111": {
+      "number": 121,
+      "parent": "M6"
+    },
+    "F112": {
+      "number": 122,
+      "parent": "M6"
+    },
+    "F113": {
+      "number": 123,
+      "parent": "M6"
+    },
+    "F114": {
+      "number": 124,
+      "parent": "M6"
+    },
+    "F115": {
+      "number": 125,
+      "parent": "M6"
+    },
+    "F116": {
+      "number": 126,
+      "parent": "M6"
+    },
+    "F117": {
+      "number": 127,
+      "parent": "M6"
+    },
+    "F118": {
+      "number": 128,
+      "parent": "M6"
+    },
+    "F119": {
+      "number": 129,
+      "parent": "M7"
+    },
+    "F120": {
+      "number": 130,
+      "parent": "M7"
+    },
+    "F121": {
+      "number": 131,
+      "parent": "M7"
+    },
+    "F122": {
+      "number": 132,
+      "parent": "M7"
+    },
+    "F123": {
+      "number": 133,
+      "parent": "M7"
+    },
+    "F124": {
+      "number": 134,
+      "parent": "M7"
+    },
+    "F125": {
+      "number": 135,
+      "parent": "M7"
+    },
+    "F126": {
+      "number": 136,
+      "parent": "M7"
+    },
+    "F127": {
+      "number": 137,
+      "parent": "M8"
+    },
+    "F128": {
+      "number": 138,
+      "parent": "M8"
+    },
+    "F129": {
+      "number": 139,
+      "parent": "M8"
+    },
+    "F130": {
+      "number": 140,
+      "parent": "M8"
+    },
+    "F131": {
+      "number": 141,
+      "parent": "M8"
+    },
+    "F132": {
+      "number": 142,
+      "parent": "M8"
+    },
+    "F133": {
+      "number": 143,
+      "parent": "M8"
+    },
+    "F134": {
+      "number": 144,
+      "parent": "Dropped"
+    },
+    "F135": {
+      "number": 145,
+      "parent": "Dropped"
+    },
+    "F136": {
+      "number": 146,
+      "parent": "Dropped"
+    },
+    "F137": {
+      "number": 147,
+      "parent": "Dropped"
+    },
+    "F138": {
+      "number": 148,
+      "parent": "Dropped"
+    },
+    "F139": {
+      "number": 149,
+      "parent": "Dropped"
+    },
+    "F140": {
+      "number": 150,
+      "parent": "Dropped"
+    },
+    "F141": {
+      "number": 151,
+      "parent": "Dropped"
+    },
+    "F142": {
+      "number": 152,
+      "parent": "Dropped"
+    },
+    "F143": {
+      "number": 153,
+      "parent": "Dropped"
+    },
+    "F144": {
+      "number": 154,
+      "parent": "Dropped"
+    },
+    "F145": {
+      "number": 155,
+      "parent": "Dropped"
+    },
+    "F146": {
+      "number": 156,
+      "parent": "Dropped"
+    },
+    "F147": {
+      "number": 157,
+      "parent": "Dropped"
+    },
+    "F148": {
+      "number": 158,
+      "parent": "Dropped"
+    },
+    "F149": {
+      "number": 159,
+      "parent": "Dropped"
+    },
+    "F150": {
+      "number": 160,
+      "parent": "Dropped"
+    },
+    "F151": {
+      "number": 161,
+      "parent": "M1"
+    },
+    "F152": {
+      "number": 162,
+      "parent": "M7"
+    },
+    "F153": {
+      "number": 163,
+      "parent": "M7"
+    },
+    "F154": {
+      "number": 164,
+      "parent": "M7"
+    },
+    "F155": {
+      "number": 165,
+      "parent": "M7"
+    },
+    "F156": {
+      "number": 166,
+      "parent": "M7"
+    },
+    "F157": {
+      "number": 167,
+      "parent": "M7"
+    },
+    "F158": {
+      "number": 168,
+      "parent": "M7"
+    }
+  },
+  "legacy": {
+    "accounts": 169,
+    "account-flow": 170,
+    "fortification": 171,
+    "player-health": 172
+  }
+}
