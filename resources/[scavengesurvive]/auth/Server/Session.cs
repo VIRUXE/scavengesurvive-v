@@ -55,5 +55,10 @@ namespace Server
         {
             BySource.Remove(source);
         }
+
+        public static List<Session> Copy()
+        {
+            return new List<Session>(BySource.Values);
+        }
     }
 }

@@ -22,15 +22,57 @@ namespace Server
             API.RegisterCommand("authpass", new Action<int, List<object>, string>(OnPass), true);
             API.RegisterCommand("authresume", new Action<int, List<object>, string>(OnResumeProbe), true);
             API.RegisterCommand("authban", new Action<int, List<object>, string>(OnBanProbe), true);
+            API.RegisterCommand("authwhitelist", new Action<int, List<object>, string>(OnWhitelistProbe), true);
             Exports.Add("getAccountId", new Func<string, object>(GetAccountId));
             Exports.Add("getAdminLevel", new Func<string, object>(GetAdminLevel));
-            Debug.WriteLine("auth server started. bans, then license auto-resume, then the card.");
+            Exports.Add("setWhitelistEnabled", new Func<bool, bool>(Whitelist.SetEnabled));
+            Exports.Add("isWhitelistEnabled", new Func<bool>(() => Whitelist.Enabled));
+            Exports.Add("setWhitelistAuto", new Func<bool, bool>(Whitelist.SetAuto));
+            Exports.Add("isWhitelistAuto", new Func<bool>(() => Whitelist.Auto));
+            Exports.Add("whitelistNameChanged", new Action<string, bool>(Whitelist.NameChanged));
+            Whitelist.Bind(ShowCountdown, Tell, Kick, Note);
+            Debug.WriteLine("auth server started. bans, license auto-resume, the card, then the whitelist.");
         }
+
+        bool whitelistLoaded;
 
         async Task Pump()
         {
             MainThread.Drain();
+            if (!whitelistLoaded)
+            {
+                whitelistLoaded = true;
+                Whitelist.Load();
+            }
+
+            Whitelist.Tick(DateTime.UtcNow.Ticks);
             await Delay(50);
+        }
+
+        void ShowCountdown(string source, int seconds)
+        {
+            TriggerClientEvent("whitelistCountdownChanged", source, seconds);
+        }
+
+        void Tell(string source, string line)
+        {
+            TriggerClientEvent("chat:addMessage", source, new Dictionary<string, object>
+            {
+                { "color", new[] { 255, 255, 0 } },
+                { "args", new[] { line } }
+            });
+        }
+
+        static void Kick(string source, string reason)
+        {
+            try
+            {
+                API.DropPlayer(source, reason);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] drop failed: " + ex.GetType().Name);
+            }
         }
 
         static object GetAccountId(string source)
@@ -266,6 +308,34 @@ namespace Server
             Debug.WriteLine("[auth] authban " + line);
         }
 
+        async void OnWhitelistProbe(int source, List<object> args, string raw)
+        {
+            string line = null;
+            try
+            {
+                Whitelist.Probe(result => line = result);
+                for (int i = 0; i < 80 && line == null; i++)
+                    await Delay(100);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] authwhitelist failed: " + ex.GetType().Name);
+                return;
+            }
+
+            if (line == null)
+            {
+                Debug.WriteLine("[auth] authwhitelist failed step=timeout");
+                MySql.Update(
+                    "DELETE FROM whitelist WHERE name IN ('f020a', 'f020b')",
+                    new object[0],
+                    new Action<dynamic>(unused => { }));
+                return;
+            }
+
+            Debug.WriteLine("[auth] authwhitelist " + line);
+        }
+
         static Dictionary<string, object> ConnectedFields(Session session)
         {
             var fields = new Dictionary<string, object>();
@@ -313,9 +383,15 @@ namespace Server
         void OnJoining([FromSource] Player player, string oldSource)
         {
             if (!string.IsNullOrEmpty(oldSource))
+            {
                 Sessions.Remap(oldSource, player.Handle);
+                Whitelist.Remap(oldSource, player.Handle);
+            }
 
             Session session = Sessions.Get(player.Handle);
+            int left = Whitelist.SecondsLeft(player.Handle, DateTime.UtcNow.Ticks);
+            if (left >= 0)
+                ShowCountdown(player.Handle, left);
             if (session == null || !session.HasAccount) return;
 
             player.State.Set("username", session.Username, true);
@@ -335,6 +411,7 @@ namespace Server
             Session session = Sessions.Get(source);
             if (session != null)
                 Debug.WriteLine("(" + source + ") " + session.Name + " dropped");
+            Whitelist.Left(session);
             Sessions.End(source);
         }
 
@@ -677,22 +754,52 @@ namespace Server
                     return;
                 }
 
-                session.HasAccount = true;
-                session.AccountId = id;
-                session.Username = username;
-                session.AdminLevel = adminLevel;
                 fields["ok"] = true;
                 fields["code"] = "recorded";
                 Note("session.recorded", fields);
-                var authed = new Dictionary<string, object>();
-                authed["player"] = source;
-                authed["account_id"] = id;
-                authed["name"] = username ?? "";
-                authed["method"] = method == "register" || method == "license" ? method : "login";
-                authed["ok"] = true;
-                authed["code"] = "OK";
-                Note("session.authenticated", authed);
-                deferrals.done();
+                Whitelist.Allow(username, adminLevel, allowed =>
+                {
+                    if (Sessions.Get(source) == null)
+                    {
+                        try
+                        {
+                            deferrals.done("Connection closed.");
+                        }
+                        catch (Exception)
+                        {
+                        }
+
+                        return;
+                    }
+
+                    if (!allowed)
+                    {
+                        var refused = new Dictionary<string, object>();
+                        refused["player"] = source;
+                        refused["account_id"] = id;
+                        refused["name"] = username ?? "";
+                        refused["ok"] = false;
+                        refused["code"] = "NOT_WHITELISTED";
+                        Note("session.refused", refused);
+                        Close(deferrals, source, Whitelist.RefuseText);
+                        return;
+                    }
+
+                    session.HasAccount = true;
+                    session.AccountId = id;
+                    session.Username = username;
+                    session.AdminLevel = adminLevel;
+                    var authed = new Dictionary<string, object>();
+                    authed["player"] = source;
+                    authed["account_id"] = id;
+                    authed["name"] = username ?? "";
+                    authed["method"] = method == "register" || method == "license" ? method : "login";
+                    authed["ok"] = true;
+                    authed["code"] = "OK";
+                    Note("session.authenticated", authed);
+                    deferrals.done();
+                    Whitelist.Joined(session);
+                });
             }));
         }
 
