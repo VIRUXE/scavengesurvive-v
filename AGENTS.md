@@ -10,7 +10,7 @@ The steps are `docs/process.md`. Decision 23 in `docs/superpowers/specs/2026-11-
 
 ## Also
 
-- Behaviour spec: `docs/superpowers/specs/2026-11-06-scavengesurvive-fivem-port-design.md`. Issue numbers: `docs/superpowers/tracker-manifest.json`.
+- Behaviour spec: `docs/superpowers/specs/2026-11-06-scavengesurvive-fivem-port-design.md`. Working rules: `docs/conventions.md`. Issue numbers: `docs/superpowers/tracker-manifest.json`.
 - Commit messages: `.cursorrules`.
 - SQL is `MySql.*` in `resources/[scavengesurvive]/lib/Server/MySql.cs`. There is no `Db.Call`.
 - Secrets stay in gitignored `env.cfg`. Do not commit or paste them.

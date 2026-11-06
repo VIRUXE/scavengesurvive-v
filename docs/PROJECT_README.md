@@ -6,6 +6,8 @@ The gamemode resources are C# and live in `resources/[scavengesurvive]/`. They a
 
 Design: `docs/superpowers/specs/2026-11-06-scavengesurvive-fivem-port-design.md`
 
+Conventions: `docs/conventions.md`
+
 Issue numbers for the matrix rows are in `docs/superpowers/tracker-manifest.json`.
 
 ## Fields

@@ -813,6 +813,8 @@ Once a minute, `system.heartbeat` carries `players`, `peds`, `vehicles`, `object
 
 Live `dev.probed` after a process start that loaded `rcon_password`, then `restart dev` (2026-11-06): one `ExpandoObject`. `ok` is `Int32` `1`. `code` is `READY`. `payload` is CLR null. The signed `NULL` is CLR null, not false. `DECIMAL` `12.50` is a `String`. `FLOAT` `4000.5` is a `Double`. `ST_X` is `4000.5` and `ST_Y` is `1200.25`, so the point error is 0 cm. `accounts` was `0` before and after the missing-table statement. `devcounts` from the console reported `players=0 peds=0 vehicles=0 objects=0 entities=0`. Console `survey` has no ped and writes nothing. `dev` was stopped after the check and is still not in `resources.cfg`. S6's round trip is this same line.
 
+**F013, 2026-11-06.** The working conventions are `docs/conventions.md`. Event names stay `<subject><PastTenseVerb>` camelCase, with direction from the API that fires them. Cross-resource calls and events pass numeric ids. `auth` keeps its session table inside that resource. Schema changes are applied on the live `ssv` database and then dumped to `sql/schema.sql`. The rules match this spec. The file is the copy a session follows, the same job as MTA `CLAUDE.md`.
+
 **F012, 2026-11-06.** License split from MTA ADR 0005, without the map half. New code is the Unlicense (`LICENSE`). The three generated catalogues are MPL-2.0 (`LICENSES/MPL-2.0.txt`), derived from Southclaws/ScavengeSurvive commit `399ba8e8fd164243b32fb694f4bb6ce37fe40c35` through the MTA `data/generated` files. Each file keeps the MPL notice and the derivation line. `NOTICE.md` names the files and the copyright. San Andreas map placements stay in the MTA repository, so this tree has no CC BY-SA license file. `oxmysql`, `ox_lib`, vMenu, and `resources/[maps]/` keep the licenses they shipped with. `Scarcity.cs` is the ADR 0001 defaults and stays under the Unlicense. Recipes stay on F108 and take the same MPL header when they land.
 
 ## Rollout Plan
@@ -877,6 +879,7 @@ The spikes below are measurements the first implementation week writes into `doc
 
 - MTA design: `scavengesurvive-mta/docs/superpowers/specs/2026-09-27-scavengesurvive-mta-port-design.md`
 - MTA conventions: `scavengesurvive-mta/CLAUDE.md` (event names, procedures, logging, no tests)
+- FiveM conventions: `docs/conventions.md` (F013)
 - MTA project board notes: `scavengesurvive-mta/docs/PROJECT_README.md`
 - Scarcity: `scavengesurvive-mta/docs/adr/0001-scarcity-respawn.md` and MTA #67, including the 2026-11-03 allowance correction
 - MTA schema: `scavengesurvive-mta/sql/schema.sql`
