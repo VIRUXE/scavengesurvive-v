@@ -6,6 +6,8 @@
 -- VIRUXE/scavengesurvive-mta sql/seed/0003_settings.sql. See NOTICE.md. F014.
 -- Hand-edited. No San Andreas coordinates.
 -- loot.count_carried is the ADR 0001 default. The MTA seed omitted it.
+-- auth.license_autologin is the FiveM license auto-resume switch (F018). Default on.
+-- player.auto_ip_login stays 0. That switch is not read.
 -- A second load keeps a value that was changed on the live table.
 
 INSERT INTO settings (skey, svalue) VALUES
@@ -27,6 +29,7 @@ INSERT INTO settings (skey, svalue) VALUES
 ('loot.spawn_multiplier','1.0'),
 ('loot.supply_cooldown_s','600'),
 ('loot.supply_tick_s','60'),
+('auth.license_autologin','1'),
 ('player.auto_ip_login','0'),
 ('player.combat_log_window','30'),
 ('player.idle_kick','1'),

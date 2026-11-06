@@ -15,7 +15,7 @@ Each file carries the MPL notice and the derivation line. SA model ids, attach o
 
 A later file compiled from the same MTA catalogues, including the recipes on F108, uses this same notice.
 
-`sql/seed/0003_settings.sql` is the MTA settings list (F014). It has no coordinates. `loot.count_carried` is the ADR 0001 default, which that MTA seed omitted.
+`sql/seed/0003_settings.sql` is the MTA settings list (F014). It has no coordinates. `loot.count_carried` is the ADR 0001 default, which that MTA seed omitted. `auth.license_autologin` is the FiveM switch added in F018. Default `1`. `player.auto_ip_login` stays `0` and is not read.
 
 `Scarcity.cs` holds the ADR 0001 defaults. That file is new code under the Unlicense.
 

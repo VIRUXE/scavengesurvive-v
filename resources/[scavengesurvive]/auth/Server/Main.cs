@@ -20,9 +20,10 @@ namespace Server
             API.RegisterCommand("authcapture", new Action<int, List<object>, string>(OnCapture), true);
             API.RegisterCommand("authrecord", new Action<int, List<object>, string>(OnRecord), true);
             API.RegisterCommand("authpass", new Action<int, List<object>, string>(OnPass), true);
+            API.RegisterCommand("authresume", new Action<int, List<object>, string>(OnResumeProbe), true);
             Exports.Add("getAccountId", new Func<string, object>(GetAccountId));
             Exports.Add("getAdminLevel", new Func<string, object>(GetAdminLevel));
-            Debug.WriteLine("auth server started. card on playerConnecting.");
+            Debug.WriteLine("auth server started. license auto-resume, then the card.");
         }
 
         async Task Pump()
@@ -76,7 +77,7 @@ namespace Server
                 Note("session.connected", ConnectedFields(session));
                 deferrals.update("Checking your account status...");
                 await Delay(0);
-                Present(deferrals, source, null, null);
+                TryResume(deferrals, source);
             }
             catch (Exception ex)
             {
@@ -187,6 +188,47 @@ namespace Server
             }
 
             Debug.WriteLine("[auth] authpass " + line);
+        }
+
+        async void OnResumeProbe(int source, List<object> args, string raw)
+        {
+            string line = null;
+            try
+            {
+                Accounts.ResumeProbe(result => line = result);
+                for (int i = 0; i < 80 && line == null; i++)
+                    await Delay(100);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] authresume failed: " + ex.GetType().Name);
+                return;
+            }
+
+            if (line == null)
+            {
+                Debug.WriteLine("[auth] authresume failed step=timeout");
+                MySql.Update(
+                    "DELETE FROM accounts WHERE name IN ('f018a', 'f018b')",
+                    new object[0],
+                    new Action<dynamic>(unused =>
+                    {
+                        MySql.Update(
+                            "INSERT INTO settings (skey, svalue) VALUES ('auth.license_autologin', '1') " +
+                            "ON DUPLICATE KEY UPDATE svalue = '1'",
+                            new object[0],
+                            new Action<dynamic>(unused2 =>
+                            {
+                                MySql.Update(
+                                    "UPDATE settings SET svalue = '0' WHERE skey = 'player.auto_ip_login'",
+                                    new object[0],
+                                    new Action<dynamic>(unused3 => { }));
+                            }));
+                    }));
+                return;
+            }
+
+            Debug.WriteLine("[auth] authresume " + line);
         }
 
         static Dictionary<string, object> ConnectedFields(Session session)
@@ -392,6 +434,73 @@ namespace Server
             return "Account load failed";
         }
 
+        void TryResume(dynamic deferrals, string source)
+        {
+            Session session = Sessions.Get(source);
+            if (session == null)
+            {
+                Close(deferrals, source, "Connection closed.");
+                return;
+            }
+
+            string license = null;
+            if (session.Identifiers != null)
+                session.Identifiers.TryGetValue("license", out license);
+
+            Accounts.Resume(license, IpOf(session), () => Sessions.Get(source) != null, result =>
+            {
+                OnResume(deferrals, source, result);
+            });
+        }
+
+        void OnResume(dynamic deferrals, string source, AccountResult result)
+        {
+            if (Sessions.Get(source) == null)
+            {
+                try
+                {
+                    deferrals.done("Connection closed.");
+                }
+                catch (Exception)
+                {
+                }
+
+                return;
+            }
+
+            string code = result == null ? "DB_ERROR" : result.Code;
+            if (result != null && result.Ok && code == "OK")
+            {
+                Accept(deferrals, source, result.AccountId, result.Name, result.AdminLevel, "license");
+                return;
+            }
+
+            var fields = new Dictionary<string, object>();
+            fields["player"] = source;
+            fields["ok"] = false;
+            fields["code"] = code ?? "DB_ERROR";
+            if (result != null && result.AccountId > 0)
+                fields["account_id"] = result.AccountId;
+
+            if (code == "INACTIVE")
+            {
+                fields["reason"] = "inactive";
+                Note("session.refused", fields);
+                Close(deferrals, source, "Account inactive");
+                return;
+            }
+
+            if (code == "DB_ERROR" || code == "GONE")
+            {
+                fields["reason"] = "accountLoadFailed";
+                Note("session.kicked", fields);
+                Close(deferrals, source, "Account load failed");
+                return;
+            }
+
+            Present(deferrals, source, null, null);
+        }
+
         static string IpOf(Session session)
         {
             if (session == null || session.Identifiers == null)
@@ -482,7 +591,7 @@ namespace Server
                 authed["player"] = source;
                 authed["account_id"] = id;
                 authed["name"] = username ?? "";
-                authed["method"] = method == "register" ? "register" : "login";
+                authed["method"] = method == "register" || method == "license" ? method : "login";
                 authed["ok"] = true;
                 authed["code"] = "OK";
                 Note("session.authenticated", authed);
