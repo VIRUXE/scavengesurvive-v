@@ -30,4 +30,4 @@ Wiki and GitHub Pages stay off. Docs live in this repo. Secret scanning and push
 
 ## Order of the port
 
-The PR plan in the design doc is the order. PR 1 and PR 2 are done (design doc, labels, milestones, epics, one issue per row). The C# resource skeleton is on `main`. Database access is `MySql.*` in `lib/Server/MySql.cs` (the C# oxmysql import). There is no `Db.Call`. The next implementation block is still PR 4's schema and the `lib` shared types (`F002`, `F004`, `F005`, `F012`). `F003` is oxmysql, which is already ensured.
+The PR plan in the design doc is the order. PR 1 and PR 2 are done (design doc, labels, milestones, epics, one issue per row). The C# resource skeleton is on `main`. Database access is `MySql.*` in `lib/Server/MySql.cs` (the C# oxmysql import). There is no `Db.Call`. F004 is in `sql/schema.sql`: the unchanged tables, triggers, and events, plus the MTA-shaped parents those objects require. The next row in that block is F005, the schema delta. `F002` and `F012` are still open in PR 4. `F003` is oxmysql, which is already ensured, and stays open until a gameplay write goes through the import on the finished schema.

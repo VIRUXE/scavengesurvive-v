@@ -435,6 +435,8 @@ The nine names that the first draft listed in neither set (`bobcat_part_install`
 
 **Schema workflow**, same as MTA `CLAUDE.md`: change the live database, then dump to `sql/schema.sql`. No migration files. Seeds that are data (`0001` item type registry, `0003` settings) are edited by hand and loaded into C# catalogues or the registry table. Loot *tables* are C# data, not Lua. SA coordinate seeds are not imported: `0002_loot_spawns.sql` (11,066), `0004_vehicle_spawns.sql` (2,017), `0005_drop_points.sql` (222), `0006_house_loot.sql` (116), and `0007_shell_loot.sql` (297 rows into `loot_spawns`, zone `bc`, header says it runs after `0002` clears that table). There is no sixth seed file. `SET SESSION system_versioning_alter_history = KEEP` before any `ALTER` on `accounts`, `items`, or `bans` (MariaDB error 4119).
 
+**F004, 2026-11-06.** `sql/schema.sql` is the dump of the unchanged tables, the three item triggers, and the three events, applied on MariaDB 13.1.1 database `ssv`. The foreign keys, triggers, and events need `bans`, `item_types`, `items`, `loot_spawns`, `vehicle_spawns`, `vehicles`, and `world_items_pos`, so those tables are in the dump in the MTA column shape. F005 rewrites them. Procedures are not in this dump. The 2025 login tables `accounts`, `account_identifiers`, and `account_tokens` are still in `ssv` and are not in the file. The repo-root `schema.sql` is still that 2025 login shape. No seeds were loaded. Every imported table was empty.
+
 **Events:** `ev_despawn_items` every minute, `ev_expire_bans` every minute, `ev_item_history` hourly. Loot due times stay in `loot_spawn_state.next_roll_at`, written by `loot_roll`, not by a scheduler that rolls dice.
 
 ### Server configuration
