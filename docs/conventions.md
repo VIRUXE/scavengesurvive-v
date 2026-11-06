@@ -41,6 +41,10 @@ The settings seed is `sql/seed/0003_settings.sql`. It is edited by hand and load
 
 On the oxmysql path that F011 measured: a SQL `NULL` is CLR null, a `DECIMAL` comes back as a string, and a `FLOAT` comes back as a double. Read a `POINT` with `ST_X` and `ST_Y`. Do not `SELECT` the raw point.
 
+## Auth capture
+
+`auth` reads identifiers once, on `playerConnecting`, after `deferrals.defer` and one tick. The types are `license`, `license2`, `discord`, `fivem`, `steam`, `xbl`, `live`, and `ip`. The value is the part after the first `:`. A missing `license` refuses the connection. Tokens are read once into the session. They are not logged, not written to a state bag, and not inserted by this row. `playerJoining` remaps the same session. `session.connected` is the log line that carries the identifier values. `session.refused` with `code` `no_license` is the refusal. Writing `account_identifiers` and `account_tokens` is F016. The card and bcrypt are F017.
+
 ## Logs
 
 `logs` exports `event(kind, fields, level)` and writes one stdout JSON line (`level`, `resource`, `kind`, then flat snake_case fields). Kind is `<domain>.<pastTenseVerb>`. A change a player can dispute logs one event with the ids. A refusal logs `ok = false` and the `code`. Nothing per frame. A batch logs a count.

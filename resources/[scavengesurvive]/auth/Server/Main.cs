@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using CitizenFX.Core;
 using CitizenFX.Core.Native;
 
@@ -18,15 +19,137 @@ namespace Server
             EventHandlers["playerJoining"] += new Action<Player, string>(OnJoining);
             EventHandlers["playerDropped"] += new Action<Player, string>(OnDropped);
             EventHandlers["player:spawned"] += new Action<Player>(OnSpawned);
-            Debug.WriteLine("auth server started.");
+            API.RegisterCommand("authcapture", new Action<int, List<object>, string>(OnCapture), true);
+            Debug.WriteLine("auth server started. capture on playerConnecting.");
         }
 
-        void OnConnecting([FromSource] Player player, string name, dynamic setKickReason, dynamic deferrals)
+        // FiveM requires one tick after defer before update, presentCard, or done.
+        // Identifiers and tokens are read on that tick, once. playerJoining only remaps.
+        async void OnConnecting([FromSource] Player player, string name, dynamic setKickReason, dynamic deferrals)
         {
+            string source = player.Handle;
+            string playerName = name ?? "";
             deferrals.defer();
-            Sessions.Begin(player.Handle, name ?? "");
-            deferrals.update("Checking your account status...");
-            Present(deferrals, player.Handle, null, null, null);
+            try
+            {
+                await Delay(0);
+                Session session = Sessions.Begin(source, playerName);
+                if (!Identifier.HasLicense(session.Identifiers))
+                {
+                    var refused = new Dictionary<string, object>();
+                    refused["player"] = source;
+                    refused["name"] = playerName;
+                    refused["ok"] = false;
+                    refused["code"] = "no_license";
+                    refused["identifier_count"] = session.Identifiers.Count;
+                    refused["token_count"] = session.Tokens.Length;
+                    Note("session.refused", refused);
+                    Sessions.End(source);
+                    deferrals.done("A Rockstar license is required to join.");
+                    return;
+                }
+
+                Note("session.connected", ConnectedFields(session));
+                deferrals.update("Checking your account status...");
+                await Delay(0);
+                Present(deferrals, source, null, null, null);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] connect failed: " + ex.GetType().Name);
+                Sessions.End(source);
+                try
+                {
+                    deferrals.done("Connection closed.");
+                }
+                catch (Exception)
+                {
+                }
+            }
+        }
+
+        void OnCapture(int source, List<object> args, string raw)
+        {
+            if (args != null && args.Count > 0)
+            {
+                string id = Convert.ToString(args[0]);
+                try
+                {
+                    string[] tokens;
+                    Dictionary<string, string> identifiers = Identifier.Read(id, out tokens);
+                    Debug.WriteLine("[auth] capture player " + Identifier.Summary(identifiers, tokens));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("[auth] capture player failed: " + ex.GetType().Name);
+                }
+                return;
+            }
+
+            Dictionary<string, string> sample = Identifier.Take(new string[]
+            {
+                "license:first",
+                "license:second",
+                "license2:l2",
+                "discord:d",
+                "fivem:f",
+                "steam:s",
+                "xbl:x",
+                "live:v",
+                "ip:203.0.113.8",
+                "notatype:no",
+                "license:",
+                ":bad"
+            });
+            string[] sampleTokens = Identifier.TakeTokens(new string[] { "tok-a", "tok-a", "", "tok-b" });
+            string license;
+            sample.TryGetValue("license", out license);
+            Debug.WriteLine("[auth] capture sample " + Identifier.Summary(sample, sampleTokens)
+                + " license_value=" + (license ?? ""));
+        }
+
+        static Dictionary<string, object> ConnectedFields(Session session)
+        {
+            var fields = new Dictionary<string, object>();
+            fields["player"] = session.Source;
+            fields["name"] = session.Name ?? "";
+            fields["ok"] = true;
+            for (int i = 0; i < Identifier.Types.Length; i++)
+            {
+                string type = Identifier.Types[i];
+                string value;
+                if (session.Identifiers.TryGetValue(type, out value) && !string.IsNullOrEmpty(value))
+                    fields[type] = value;
+            }
+
+            fields["token_count"] = session.Tokens.Length;
+            return fields;
+        }
+
+        void Note(string kind, Dictionary<string, object> fields)
+        {
+            Debug.WriteLine("[auth] " + kind + " token_count=" + Field(fields, "token_count")
+                + " code=" + Field(fields, "code"));
+            if (API.GetResourceState("logs") != "started")
+                return;
+
+            try
+            {
+                dynamic logs = Exports["logs"];
+                logs.@event(kind, fields, "info");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] logs export failed: " + ex.GetType().Name);
+            }
+        }
+
+        static string Field(Dictionary<string, object> fields, string key)
+        {
+            object value;
+            if (fields == null || !fields.TryGetValue(key, out value) || value == null)
+                return "";
+            return Convert.ToString(value, CultureInfo.InvariantCulture);
         }
 
         void OnJoining([FromSource] Player player, string oldSource)

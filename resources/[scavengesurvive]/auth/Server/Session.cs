@@ -22,12 +22,14 @@ namespace Server
 
         public static Session Begin(string source, string name)
         {
+            string[] tokens;
+            Dictionary<string, string> identifiers = Identifier.Read(source, out tokens);
             var session = new Session
             {
                 Source = source,
                 Name = name,
-                Identifiers = Identifier.Read(source),
-                Tokens = Identifier.ReadTokens(source)
+                Identifiers = identifiers,
+                Tokens = tokens
             };
             BySource[source] = session;
             return session;
