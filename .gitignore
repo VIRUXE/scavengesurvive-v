@@ -10,3 +10,10 @@ resources/ox_lib/
 .replxx_history
 env.cfg
 .cursorignore
+
+# F001. MSBuild output and NuGet. The connection string is env.cfg.
+bin/
+obj/
+packages/
+*.mdb
+*.pdb
