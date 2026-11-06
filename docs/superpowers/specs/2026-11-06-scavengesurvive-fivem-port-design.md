@@ -319,6 +319,8 @@ Three layers, because any one of them has failed in the wild (`citizenfx/fivem#3
 2. `SetRoutingBucketPopulationEnabled(bucket, false)` on bucket 0 and on the tutorial bucket (`https://docs.fivem.net/docs/scripting-reference/onesync/`).
 3. Client belt every frame, which is the loop commented out in the spike's `resources/world/client/population.lua`: `SetPedDensityMultiplierThisFrame(0.0)`, scenario density 0, parked and random vehicle density 0, `SetGarbageTrucks(false)`, `SetRandomBoats(false)`, `SetCreateRandomCops(false)`. Plus `entityCreating` on the server cancelling population peds and vehicles (`GetEntityPopulationType`).
 
+**F009, 2026-11-06.** The belt is in `world`. Layer 1 is the F008 convar `onesync_population false`. Layer 2 calls `SetRoutingBucketPopulationEnabled(bucket, false)` for bucket 0 and for the tutorial bucket. The tutorial bucket is **1**. F039 puts the tutorial in bucket 1. A staff instance has no bucket id yet. Layer 3 is the client tick: ped, scenario, parked, vehicle, and random vehicle density at 0. The client also sets both population budgets to 0, turns off garbage trucks, boats (`SetRandomBoats` and `SetRandomBoatsInMp`), random cops, random events, distant vehicle lights, and the vehicle scenario types. `entityCreating` cancels a ped or a vehicle whose population type is 1 through 5 (`RANDOM_PERMANENT` through `RANDOM_AMBIENT`, which includes `RANDOM_PARKED`). Types 6 (`PERMANENT`) and 7 (`MISSION`) stay, so a script vehicle is not cancelled. The world client does not pause the clock, force a blackout, or handle `time:set` and `weather:set`. Those were the spike admin setters. `staff` still emits those two events. Nothing applies them until F072 and F073.
+
 Weather and clock are native and server-driven. The survival cycle (the MTA weather resource, not the spike's admin `weather:set` toast) picks the next type on the MTA timer and tells clients `SetWeatherTypeNowPersist`. Clock is `NetworkOverrideClockTime` from the server's cycle, not from a client. Clients do not own time. The spike's `resources/world/client/time.lua` and `weather.lua` are admin setters and are not kept.
 
 Routing buckets replace MTA dimensions. Docs compare them to virtual worlds and explicitly say they are not the tool for interiors (`https://docs.fivem.net/docs/cookbook/2020/11/27/routing-buckets-split-game-state/`). GTA V interiors and MLOs are coordinates in the same world. The `interior` column is dropped. `dimension` becomes `bucket`. The tutorial (#3) and any staff instance use a bucket. Stock interiors do not.
@@ -457,7 +459,7 @@ sv_enforceGameBuild 3570
 sv_endpointPrivacy true
 ```
 
-**F008, 2026-11-06.** `server.cfg` sets this block before the `ensure` lines. `sv_entityLockdown` is `strict`. Whether `strict` blocks a client-local `CreateObject` is still spike S1. The routing-bucket and client density layers stay on F009. `exec env.cfg` follows the block, so that file must not set `sv_maxclients` or it replaces 200. The gitignored `env.cfg` on this host does not.
+**F008, 2026-11-06.** `server.cfg` sets this block before the `ensure` lines. `sv_entityLockdown` is `strict`. Whether `strict` blocks a client-local `CreateObject` is still spike S1. The routing-bucket and client density layers landed in F009. `exec env.cfg` follows the block, so that file must not set `sv_maxclients` or it replaces 200. The gitignored `env.cfg` on this host does not.
 
 `sv_maxclients` above 64 requires `onesync on` (`https://docs.fivem.net/docs/server-manual/server-commands/#sv_maxclients-newvalue`). Above 48 slots, OneSync is not free. `ensure` order: `lib`, `data`, `logs`, `auth`, `character`, `items`, `crafting`, `apparel`, `weapons`, `vehicles`, `loot`, `building`, `world`, `hud`, `anticheat`, `staff`. If S3 keeps oxmysql, it is ensured first and is the node resource from upstream, not code we write. `dev` is not ensured in prod. Stock `chat` may be ensured. `spawnmanager` and `sessionmanager` must not fight `character` for the spawn; if they respawn the ped, they are stopped. `hardcap` from the 2023 tree is not used; `sv_maxclients` is the cap. No `ox_lib`.
 
@@ -564,7 +566,7 @@ MTA issue numbers are `VIRUXE/scavengesurvive-mta#N`. FiveM issues #1, #3, #4, #
 | F036 | character | port | Travel stats as shipped: `character/shared/logic/travel.lua` and `character/server/travel.lua`. Kinds `walking/running/sprinting/crouching/swimming/driving/air`. Server classifies the second. Client reports jumps, rate-limited. Counters session-only. #138 stays open as a tracker miss. | #138 | character |
 | F037 | character | port | Death, permadeath, `character_death_drop`, torso item, play-again creates a new row. | #10, #139, #26 | character |
 | F038 | character | port | Combat log: damage inside the window and the attacker online counts as death. | #26 | character |
-| F039 | character | replace | Tutorial in a routing bucket, then south-LS spawn. Joins FiveM #3. Not an SA interior world. | #10 | character |
+| F039 | character | replace | Tutorial in routing bucket 1 (F009 disables population there), then south-LS spawn. Joins FiveM #3. Not an SA interior world. | #10 | character |
 | F040 | character | port | Save-block polygons on LS, authored with the first district. Position flush uses the reset point. | #10 | character |
 
 ### M2 — items (F041–F064)
