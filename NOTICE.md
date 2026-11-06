@@ -9,10 +9,13 @@ These files are derived from [Southclaws/ScavengeSurvive](https://github.com/Sou
 - `resources/[scavengesurvive]/data/Shared/ItemData.Generated.cs`
 - `resources/[scavengesurvive]/data/Shared/LootData.Generated.cs`
 - `resources/[scavengesurvive]/data/Shared/LangData.Generated.cs`
+- `sql/seed/0003_settings.sql`
 
 Each file carries the MPL notice and the derivation line. SA model ids, attach offsets, wear offsets, and defence geometry were not copied. Upstream asks that credits, including in-game credit messages, are kept. Those credit strings stay in the language catalogue.
 
 A later file compiled from the same MTA catalogues, including the recipes on F108, uses this same notice.
+
+`sql/seed/0003_settings.sql` is the MTA settings list (F014). It has no coordinates. `loot.count_carried` is the ADR 0001 default, which that MTA seed omitted.
 
 `Scarcity.cs` holds the ADR 0001 defaults. That file is new code under the Unlicense.
 

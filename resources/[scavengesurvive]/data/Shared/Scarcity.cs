@@ -13,8 +13,7 @@ namespace Shared
     }
 
     /// <summary>
-    /// ADR 0001 defaults. Strings match sql/seed/0003_settings.sql where that seed has the key.
-    /// loot.count_carried is on by default in the ADR and is absent from that seed. F014 loads the SQL seed.
+    /// ADR 0001 defaults. Strings match sql/seed/0003_settings.sql, which F014 loads into settings.
     /// </summary>
     static class Scarcity
     {

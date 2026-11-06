@@ -37,7 +37,7 @@ Change the live database, then dump to `sql/schema.sql` and commit that dump. Do
 
 Procedures are not in the current dump. Add a procedure in the row that first needs it, on the live database, then dump. Do not load an MTA procedure whose body still mentions `interior`, `dimension`, `serial`, or a signed `vehicles.model`. `bucket` replaces `dimension`. Zone columns are `varchar(16)`.
 
-Seeds that are data (`0001` item types, `0003` settings) are edited by hand. Loot tables are C# data in `data`. San Andreas coordinate seeds are not imported.
+The settings seed is `sql/seed/0003_settings.sql`. It is edited by hand and loaded into `settings`. Item types are the C# catalogue, not a `0001` file. Loot tables are C# data in `data`. San Andreas coordinate seeds are not imported. The structure dump does not contain seed rows.
 
 On the oxmysql path that F011 measured: a SQL `NULL` is CLR null, a `DECIMAL` comes back as a string, and a `FLOAT` comes back as a double. Read a `POINT` with `ST_X` and `ST_Y`. Do not `SELECT` the raw point.
 

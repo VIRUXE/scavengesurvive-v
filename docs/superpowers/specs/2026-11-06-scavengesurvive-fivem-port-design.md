@@ -436,7 +436,7 @@ Leave byte-for-byte, because the body does not mention those columns: `bag_wear`
 
 The nine names that the first draft listed in neither set (`bobcat_part_install`, `container_item_destroy`, `container_items_destroy`, `item_create_held`, `item_create_in_container`, `item_disarm`, `item_world_move`, `vehicle_part_install`, `vehicle_parts_detached`) are classified above. The dump diff is the review.
 
-**Schema workflow**, same as MTA `CLAUDE.md`: change the live database, then dump to `sql/schema.sql`. No migration files. Seeds that are data (`0001` item type registry, `0003` settings) are edited by hand and loaded into C# catalogues or the registry table. Loot *tables* are C# data, not Lua. SA coordinate seeds are not imported: `0002_loot_spawns.sql` (11,066), `0004_vehicle_spawns.sql` (2,017), `0005_drop_points.sql` (222), `0006_house_loot.sql` (116), and `0007_shell_loot.sql` (297 rows into `loot_spawns`, zone `bc`, header says it runs after `0002` clears that table). There is no sixth seed file. `SET SESSION system_versioning_alter_history = KEEP` before any `ALTER` on `accounts`, `items`, or `bans` (MariaDB error 4119).
+**Schema workflow**, same as MTA `CLAUDE.md`: change the live database, then dump to `sql/schema.sql`. No migration files. Item types are the C# catalogue (F006). The settings seed is `sql/seed/0003_settings.sql`, edited by hand and loaded into `settings` (F014). The structure dump does not contain those rows. Loot *tables* are C# data, not Lua. SA coordinate seeds are not imported: `0002_loot_spawns.sql` (11,066), `0004_vehicle_spawns.sql` (2,017), `0005_drop_points.sql` (222), `0006_house_loot.sql` (116), and `0007_shell_loot.sql` (297 rows into `loot_spawns`, zone `bc`, header says it runs after `0002` clears that table). There is no sixth seed file. `SET SESSION system_versioning_alter_history = KEEP` before any `ALTER` on `accounts`, `items`, or `bans` (MariaDB error 4119).
 
 **F004, 2026-11-06.** `sql/schema.sql` was the dump of the unchanged tables, the three item triggers, and the three events, applied on MariaDB 13.1.1 database `ssv`. The foreign keys, triggers, and events needed `bans`, `item_types`, `items`, `loot_spawns`, `vehicle_spawns`, `vehicles`, and `world_items_pos`, so those tables were in the dump in the MTA column shape. Procedures were not in that dump. The 2025 login tables were still in `ssv` and were not in the file. The repo-root `schema.sql` was still that 2025 login shape. No seeds were loaded. Every imported table was empty.
 
@@ -758,7 +758,7 @@ UNIQUE (container_id, slot)
 
 `loot_zone` on an item still records the zone that minted it, so carried goods count against that zone (ADR 0001). Zone strings get longer; the column widens with `world_budget.zone` and `loot_spawns.zone`.
 
-Migration strategy: this is a new database, not an alter of the live MTA server. Build the FiveM schema by dumping MTA, applying the column changes once, and re-dumping. No player rows are copied. SA coordinate seeds are not loaded. Item-type and settings seeds are.
+Migration strategy: this is a new database, not an alter of the live MTA server. Build the FiveM schema by dumping MTA, applying the column changes once, and re-dumping. No player rows are copied. SA coordinate seeds are not loaded. Item types are the C# catalogue. The settings seed is loaded into `settings` (F014).
 
 ## Alternatives Considered
 
@@ -814,6 +814,8 @@ Once a minute, `system.heartbeat` carries `players`, `peds`, `vehicles`, `object
 Live `dev.probed` after a process start that loaded `rcon_password`, then `restart dev` (2026-11-06): one `ExpandoObject`. `ok` is `Int32` `1`. `code` is `READY`. `payload` is CLR null. The signed `NULL` is CLR null, not false. `DECIMAL` `12.50` is a `String`. `FLOAT` `4000.5` is a `Double`. `ST_X` is `4000.5` and `ST_Y` is `1200.25`, so the point error is 0 cm. `accounts` was `0` before and after the missing-table statement. `devcounts` from the console reported `players=0 peds=0 vehicles=0 objects=0 entities=0`. Console `survey` has no ped and writes nothing. `dev` was stopped after the check and is still not in `resources.cfg`. S6's round trip is this same line.
 
 **F013, 2026-11-06.** The working conventions are `docs/conventions.md`. Event names stay `<subject><PastTenseVerb>` camelCase, with direction from the API that fires them. Cross-resource calls and events pass numeric ids. `auth` keeps its session table inside that resource. Schema changes are applied on the live `ssv` database and then dumped to `sql/schema.sql`. The rules match this spec. The file is the copy a session follows, the same job as MTA `CLAUDE.md`.
+
+**F014, 2026-11-06.** The settings seed is `sql/seed/0003_settings.sql`, loaded into the live `ssv.settings` table. It is the MTA settings list, which has no coordinates, plus `loot.count_carried` `1`. ADR 0001 defines that key and the MTA seed omitted it. `player.ping_limit` is `400`, `player.combat_log_window` is `30`, and `loot.despawn_minutes` is `120`. A second load uses `ON DUPLICATE KEY UPDATE svalue = svalue`, so a live edit stays. `sql/schema.sql` stays the structure dump and does not contain these rows. There is no `0001_item_types.sql`. Item types stay the F006 catalogue. The file is MPL-2.0, named in `NOTICE.md`. `Scarcity.cs` keeps the same strings as compile-time defaults.
 
 **F012, 2026-11-06.** License split from MTA ADR 0005, without the map half. New code is the Unlicense (`LICENSE`). The three generated catalogues are MPL-2.0 (`LICENSES/MPL-2.0.txt`), derived from Southclaws/ScavengeSurvive commit `399ba8e8fd164243b32fb694f4bb6ce37fe40c35` through the MTA `data/generated` files. Each file keeps the MPL notice and the derivation line. `NOTICE.md` names the files and the copyright. San Andreas map placements stay in the MTA repository, so this tree has no CC BY-SA license file. `oxmysql`, `ox_lib`, vMenu, and `resources/[maps]/` keep the licenses they shipped with. `Scarcity.cs` is the ADR 0001 defaults and stays under the Unlicense. Recipes stay on F108 and take the same MPL header when they land.
 
@@ -942,7 +944,7 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 ### PR 5 — Catalogues
 
 - **Title:** feat(data): item graph catalogues, languages, and settings
-- **Files:** `data/Shared/**/*.cs` (embedded catalogues), `sql/seed/0001_item_types.sql`, `sql/seed/0003_settings.sql`
+- **Files:** `data/Shared/**/*.cs` (embedded catalogues). `sql/seed/0001_item_types.sql` was not created (F006). `sql/seed/0003_settings.sql` is the settings seed (F014).
 - **Depends on:** PR 4
 - **Description:** Names, sizes, calibres, loot weights, and settings, as C# types. Both language families: ten `lang_*` including English, nine `strings_*`, no `strings_en`. `Prop` and `WeaponHash` are present and 0. Unmapped prop is `prop_box_wood05a`. Recipes are not this PR (F108 ports `craft.lua`). No SA coordinates. Commit the rebuilt root DLLs. F006, F007, F014. F136 is a note in the PR body, not an import.
 
