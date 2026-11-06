@@ -2,7 +2,7 @@
 
 This is how every session works on `VIRUXE/scavengesurvive-v`. The owner set it on 2026-11-06.
 
-The repo is public. GitHub is the tracker and the record. The design doc stays the behaviour spec. This file stays the way of working.
+The repo is public. GitHub is the tracker and the record. The design doc stays the behaviour spec. This file is the way of working. `AGENTS.md` points every session here.
 
 ## Before changing code
 
