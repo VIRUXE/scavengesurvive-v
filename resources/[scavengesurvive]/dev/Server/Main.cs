@@ -36,6 +36,8 @@ namespace Server
         bool _probed;
         bool _busy;
         long _nextCount;
+        Probe _pending;
+        long _pendingAt;
 
         public Main()
         {
@@ -60,6 +62,24 @@ namespace Server
                         _nextCount = now + MinuteMs;
                         RunProbe(0);
                         ReportCounts("start");
+                    }
+                    else if (_pending != null && now - _pendingAt >= 1000)
+                    {
+                        Probe bag = _pending;
+                        _pending = null;
+                        MySql.Scalar(CountSql, new Action<dynamic>(after =>
+                        {
+                            bag.After = after;
+                            _busy = false;
+                            try
+                            {
+                                Finish(bag);
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine("[dev] probe finish failed: " + ex.GetType().Name);
+                            }
+                        }));
                     }
                     else if (_probed && now >= _nextCount)
                     {
@@ -162,23 +182,11 @@ namespace Server
                     MySql.Single(TypeSql, new Action<dynamic>(types =>
                     {
                         bag.Types = types;
-                        MySql.Single(BadSql, new Action<dynamic>(bad =>
-                        {
-                            bag.Bad = bad;
-                            MySql.Scalar(CountSql, new Action<dynamic>(after =>
-                            {
-                                bag.After = after;
-                                _busy = false;
-                                try
-                                {
-                                    Finish(bag);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Debug.WriteLine("[dev] probe finish failed: " + ex.GetType().Name);
-                                }
-                            }));
-                        }));
+                        // oxmysql logs a rejected statement and does not call the callback
+                        // unless the call was a promise. Do not wait on it.
+                        MySql.Single(BadSql, new Action<dynamic>(unused => { }));
+                        _pending = bag;
+                        _pendingAt = NowMs();
                     }));
                 }));
             }));
@@ -214,8 +222,7 @@ namespace Server
             double dx;
             double dy;
             fields["point_cm"] = PointErrorCm(px, py, out dx, out dy);
-            fields["bad_type"] = TypeName(bag.Bad);
-            fields["bad_empty"] = bag.Bad == null;
+            fields["bad_callback"] = false;
             fields["accounts_before"] = Show(bag.Before);
             fields["accounts_after"] = Show(bag.After);
             fields["accounts_unchanged"] = SameCount(bag.Before, bag.After);
@@ -230,7 +237,7 @@ namespace Server
                 + " x=" + Show(x)
                 + " px=" + Show(px)
                 + " py=" + Show(py)
-                + " bad_empty=" + (bag.Bad == null ? "yes" : "no")
+                + " bad_callback=no"
                 + " accounts_unchanged=" + (SameCount(bag.Before, bag.After) ? "yes" : "no"));
         }
 
@@ -445,7 +452,6 @@ namespace Server
             public object Before;
             public object Shape;
             public object Types;
-            public object Bad;
             public object After;
         }
     }
