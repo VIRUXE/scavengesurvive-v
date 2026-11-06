@@ -166,7 +166,7 @@ Start order is `server.cfg` `ensure` lines, which is also dependency order. `fxm
 | Resource | Side | Owns | Key exports / events |
 |---|---|---|---|
 | `lib` | shared C# plus a server-only assembly | `Shared`: rate limit, one-shot token, log field shape, vectors. No socket. No MySQL driver. `Server/MySql.cs` is the oxmysql import, compiled into every server assembly. | `MySql.Query`, `Single`, `Scalar`, `Update`, `Insert`, `Prepare`, `Raw`, `Transaction`. |
-| `data` | shared C# | Catalogues compiled in from the MTA generated files, as C# types or embedded resources. Item types (names, sizes, categories, calibres, recipes), loot tables, both language families, vehicle class rows. SA `model` and `baseWeapon` are not runtime fields. `Prop` and `Weapon` are `uint` joaats. Unmapped prop is the crate fallback, not model `331`. | `GetItemType`, `GetLootTable`, `GetRecipe`, `Lang.ItemType`, `Lang.Text`, `Lang.TextFor`. |
+| `data` | shared C# | Catalogues compiled in from the MTA generated files, as C# types or embedded resources. Item types (names, sizes, categories, calibres, recipes), loot tables, both language families, vehicle class rows. SA `model` and `baseWeapon` are not runtime fields. `Prop` and `WeaponHash` are `uint` joaats (`Weapon` stays the ported stats object). Both are 0 until a later row writes one. Unmapped `Prop` resolves through `PropHash` to `prop_box_wood05a` (joaat `2781083456`), not SA model `331` and not MTA model `1271`. `WeaponHash` 0 stays 0 until F081. | `GetItemType`, `GetLootTable`, `GetRecipe`, `Lang.ItemType`, `Lang.Text`, `Lang.TextFor`, `PropHash`. |
 | `auth` | server + client NUI/card | Accounts, bcrypt, identifier and token binding, bans, whitelist, connection log, admin level, language. Deferral Adaptive Card during `playerConnecting`. | `getAccountId`, `getCharacterId` is **not** here, `getAdminLevel`. Emits `playerAuthenticated`, `playerLoggedOut`. Handles `loginRequested`, `registrationRequested`. |
 | `character` | server + client | Character row, appearance JSON, survival tick (food, bleed, infection, drugs, knockout), skills, travel stats, spawn, death, save-block, combat-log clock. | `getCharacterId`, `isHandsUp`, `isKnockedOut`. Emits `characterSpawned`, `characterDied`, `characterStatsSynced`. |
 | `items` | server + client | The item graph. World rows. Projection payloads. Pickup, drop, give, wear, containers, use dispatch. | `createItem`, `destroyItem`, `getHeld` by character id. Emits `itemCreated`, `itemMoved`, `itemDestroyed`, `itemUseAttempted`. Handles `itemPickupRequested` and the rest of the MTA client-to-server list. |
@@ -418,7 +418,7 @@ Either path is one `CALL` per mutation. Do not open a multi-statement transactio
 | `loot_spawns`, `vehicle_spawns`, `vehicles` | Drop `interior` where present. `dimension` → `bucket` where present. `loot_spawns.zone` → `varchar(16)`. `vehicles.model` `smallint` cannot hold a joaat; change to `int unsigned`. A joaat does not fit a signed `INT` parameter either. SA `model` values are not copied. `pos POINT` and spatial keys stay. Empty of SA rows. |
 | `reports` | Drop `interior`. `dimension` → `bucket`. Not unchanged. |
 | `world_budget`, `supply_drop_points`, `weapon_cache_points` | `zone` → `varchar(16)`. Shapes otherwise stay. |
-| `item_types` | `model` (SA object id) is not read at runtime. The C# catalogue carries `Prop` and `Weapon` hashes. F005 kept `model` in the table, unused. |
+| `item_types` | `model` (SA object id) is not read at runtime. The C# catalogue carries `Prop` and `WeaponHash`. Both are 0. `Prop` 0 resolves to `prop_box_wood05a`. F005 kept `model` in the table, unused. |
 | `world_items_pos` | Unchanged mechanism. New coordinates are LS. |
 
 **New tables:** `account_identifiers(account_id, type, value, created_at, updated_at, last_used, times_used)` with primary key `(account_id, type)`, `UNIQUE(type, value)`, and `type` in the approved set (`steam`, `discord`, `xbl`, `live`, `license`, `license2`, `fivem`, `ip`); `account_tokens(account_id, token, created_at, updated_at, last_used, times_used)` with primary key `(account_id, token)`; `ban_identifiers(ban_id, type, value)` where `type` is that set plus `token`; `connection_identifiers(log_id, type, value)` for the connection-log set, without `token`. The identifier and token columns match the spike's shape, including `license2`.
@@ -524,7 +524,7 @@ MTA issue numbers are `VIRUXE/scavengesurvive-mta#N`. FiveM issues #1, #3, #4, #
 | F004 | persistence | port | Import the MTA dump's unchanged tables, triggers, and events. MariaDB 13.1.1+. | #4, #78 | sql |
 | F005 | persistence | replace | Schema delta: identifiers, tokens, `ban_identifiers`, drop `serial`, `bucket` replaces `dimension`, drop `interior`, `appearance` JSON, `vehicles.model` unsigned, `zone varchar(16)`. | #4, #43 | sql |
 | F006 | data | port | Item names, sizes, categories, calibres, loot weights, settings keys from ADR 0001, compiled as C# types. Both language families (`lang_*.lua` including English, `strings_*.lua` except there is no `strings_en.lua`). Recipes are the shipped `craft.lua` list (F108), not the stale text of #147. | #5, #7, #51 | data |
-| F007 | data | replace | `prop` and `weapon` joaat fields. SA `model` and `baseWeapon` are not runtime. Unmapped prop renders as the crate fallback. | #56 | data |
+| F007 | data | replace | `Prop` and `WeaponHash` joaat fields, both 0. SA `model` and `baseWeapon` are not runtime. Unmapped prop resolves to `prop_box_wood05a`. | #56 | data |
 | F008 | infra | replace | `server.cfg`: OneSync infinity, population off, lockdown, state-bag strict mode, filter control, build 3570, `sv_maxclients 200`. | — | server.cfg |
 | F009 | world | replace | Population belt: convar, bucket flag, client density loop, `entityCreating` cancel. | — | world |
 | F010 | infra | port | `logs` resource. `log.event` shape from MTA `CLAUDE.md`. Stdout JSON. Optional Loki. No token values. | logs design 2026-11-04 | logs |
@@ -831,7 +831,7 @@ F074 (explosives) is owned by M6 / PR 14. It is not in PR 11. It does not slip p
 | `CALL` on the chosen C# path may return a nested result set or drop `ok`. The Mono host may also refuse a raw MySQL socket. | High | Spike S3 gates M2 and probes `item_give`, not `item_pickup`. Unwrap one row. If the socket fails, call oxmysql exports. Do not replace procedures with a C# transaction. |
 | `sv_entityLockdown strict` might block the local objects the projection needs. | Medium | Spike S1. Fallback is `relaxed` plus `entityCreating` cancel. |
 | Population still spawns parked vehicles at high player counts (`citizenfx/fivem#3623`). | Medium | Three layers in F009. |
-| Prop gap: 345 item types and no SA models. A missing hash makes an item invisible or the crate fallback. | Medium | F007 crate fallback so gameplay still runs. Author props for weapons, bags, and defences before M4 and M6 exit. Do not block M1. |
+| Prop gap: 345 item types and no SA models. A missing hash makes an item invisible or the crate fallback. | Medium | F007 resolves an unmapped prop to `prop_box_wood05a` so gameplay still runs. Author props for weapons, bags, and defences before M4 and M6 exit. Do not block M1. World objects that spawn that hash are F043. |
 | Recipe drift if someone copies the early M6 list or the stale #147 body. | Medium | F108 copies `craft.lua` after `04f4174`. The 29 names are already in that file. Barricade and the three invented crafts stay out. |
 | net452 cannot reference current MySqlConnector, so the driver path may be a dead end. | Medium | S3 measures the socket and the nuspec. oxmysql exports are the fallback. The TFM does not move. |
 | Solo developer, 158 rows. | Medium | Milestones are ordered. Deferrals are allowed to stay open. No test-suite work. |
@@ -924,7 +924,7 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 - **Title:** feat(data): item graph catalogues, languages, and settings
 - **Files:** `data/Shared/**/*.cs` (embedded catalogues), `sql/seed/0001_item_types.sql`, `sql/seed/0003_settings.sql`
 - **Depends on:** PR 4
-- **Description:** Names, sizes, calibres, loot weights, and settings, as C# types. Both language families: ten `lang_*` including English, nine `strings_*`, no `strings_en`. Empty `Prop` and `Weapon` fields. Recipes are not this PR (F108 ports `craft.lua`). No SA coordinates. Commit the rebuilt root DLLs. F006, F007, F014. F136 is a note in the PR body, not an import.
+- **Description:** Names, sizes, calibres, loot weights, and settings, as C# types. Both language families: ten `lang_*` including English, nine `strings_*`, no `strings_en`. `Prop` and `WeaponHash` are present and 0. Unmapped prop is `prop_box_wood05a`. Recipes are not this PR (F108 ports `craft.lua`). No SA coordinates. Commit the rebuilt root DLLs. F006, F007, F014. F136 is a note in the PR body, not an import.
 
 ### PR 6 — Population, clock, weather shell
 

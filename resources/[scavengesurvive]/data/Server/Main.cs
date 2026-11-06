@@ -12,6 +12,9 @@ namespace Server
             Exports.Add("findWeapons", new Func<string, string[]>(FindWeapons));
             Exports.Add("weaponName", new Func<string, string>(hash => WeaponCatalogue.NameOf(hash)));
             Exports.Add("getItemType", new Func<string, Dictionary<string, object>>(Shared.Catalogue.ItemTypeMap));
+            Exports.Add("propHash", new Func<string, uint>(Shared.Catalogue.PropHash));
+            Exports.Add("weaponHash", new Func<string, uint>(Shared.Catalogue.WeaponHash));
+            Exports.Add("crateProp", new Func<uint>(() => Shared.Catalogue.CrateProp));
             Exports.Add("getLootTable", new Func<string, Dictionary<string, object>>(Shared.Catalogue.LootTableMap));
             Exports.Add("getItemTypes", new Func<string[]>(Shared.Catalogue.ItemTypes));
             Exports.Add("calibreBleed", new Func<string, object>(Shared.Catalogue.CalibreBleed));

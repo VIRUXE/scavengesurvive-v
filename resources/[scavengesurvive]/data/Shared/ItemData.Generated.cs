@@ -4,7 +4,8 @@
 //
 // Ported from VIRUXE/scavengesurvive-mta data/generated. F006.
 // SA model ids, attach offsets, wear offsets, and defence geometry are not copied.
-// Recipes are not in this file (F108). Prop and Weapon joaats are F007.
+// Recipes are not in this file (F108). Prop and WeaponHash are 0 on every row (F007).
+// Catalogue.PropHash resolves 0 to prop_box_wood05a. F081 writes real weapon hashes.
 
 namespace Shared
 {

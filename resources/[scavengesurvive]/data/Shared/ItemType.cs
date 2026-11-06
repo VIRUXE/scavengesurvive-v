@@ -132,7 +132,8 @@ namespace Shared
 
     /// <summary>
     /// Gameplay fields of one MTA item type. SA model ids, attach offsets, wear offsets,
-    /// and defence geometry are not runtime. Prop and Weapon joaats are F007.
+    /// defence geometry, and <c>baseWeapon</c> are not runtime.
+    /// <see cref="Prop"/> and <see cref="WeaponHash"/> are GTA V joaats. Zero is unmapped.
     /// </summary>
     public sealed class ItemType
     {
@@ -151,8 +152,10 @@ namespace Shared
         public readonly BagStats Bag;
         public readonly ContainerStats Container;
         public readonly ExplosiveStats Explosive;
+        public readonly uint Prop;
+        public readonly uint WeaponHash;
 
-        public ItemType(string uname, string name, int size, string category, int maxHitpoints, int price, bool longPickup, bool useCarryAnim, WeaponStats weapon, AmmoStats ammo, FoodStats food, LiquidStats liquid, BagStats bag, ContainerStats container, ExplosiveStats explosive)
+        public ItemType(string uname, string name, int size, string category, int maxHitpoints, int price, bool longPickup, bool useCarryAnim, WeaponStats weapon, AmmoStats ammo, FoodStats food, LiquidStats liquid, BagStats bag, ContainerStats container, ExplosiveStats explosive, uint prop = 0, uint weaponHash = 0)
         {
             Uname = uname;
             Name = name;
@@ -169,6 +172,8 @@ namespace Shared
             Bag = bag;
             Container = container;
             Explosive = explosive;
+            Prop = prop;
+            WeaponHash = weaponHash;
         }
     }
 

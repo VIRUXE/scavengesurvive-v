@@ -14,6 +14,12 @@ namespace Shared
         static readonly Dictionary<string, string[]> AmmoByCalibre = new Dictionary<string, string[]>();
         static readonly Dictionary<string, string> ScarcityValues = new Dictionary<string, string>();
 
+        /// <summary>Vanilla wooden crate. Unmapped <see cref="ItemType.Prop"/> resolves to this.</summary>
+        public const string CrateModel = "prop_box_wood05a";
+
+        /// <summary>joaat of <see cref="CrateModel"/>. Not SA model 331 and not MTA model 1271.</summary>
+        public const uint CrateProp = 2781083456u;
+
         public static int ItemCount { get { return Order.Length; } }
         public static int LootTableCount { get { return LootNames.Length; } }
 
@@ -61,6 +67,29 @@ namespace Shared
             if (uname != null && ByUname.TryGetValue(uname, out item))
                 return item;
             return null;
+        }
+
+        /// <summary>
+        /// World-object hash for an item. A stored prop wins. Zero, and an unknown uname, are the crate.
+        /// </summary>
+        public static uint PropHash(ItemType item)
+        {
+            if (item != null && item.Prop != 0)
+                return item.Prop;
+            return CrateProp;
+        }
+
+        public static uint PropHash(string uname)
+        {
+            return PropHash(GetItemType(uname));
+        }
+
+        public static uint WeaponHash(string uname)
+        {
+            ItemType item = GetItemType(uname);
+            if (item == null)
+                return 0;
+            return item.WeaponHash;
         }
 
         public static string[] ItemTypes()
@@ -142,6 +171,9 @@ namespace Shared
             map.Add("price", item.Price);
             map.Add("longPickup", item.LongPickup);
             map.Add("useCarryAnim", item.UseCarryAnim);
+            map.Add("prop", item.Prop);
+            map.Add("propHash", PropHash(item));
+            map.Add("weaponHash", item.WeaponHash);
             if (item.Weapon != null)
                 map.Add("weapon", WeaponMap(item.Weapon));
             if (item.Ammo != null)
