@@ -182,7 +182,7 @@ Start order is `server.cfg` `ensure` lines, which is also dependency order. A re
 | `staff` | server + client | Level 1–5 commands, reports, spectate, mute, freeze, bug reports, settings. | Every privileged command goes through `staff`, logged to `staff_actions`. |
 | `anticheat` | server | Teleport reconcile, ping, focus loss, `entityCreating` population reject, detection fields. | Vetoes `itemPickupAttempted` for traps. |
 | `logs` | server | `log.event(kind, fields, level)` to stdout JSON. Optional Loki push, same kind names as MTA (`domain.pastTenseVerb`). The only resource that may `PerformHttpRequest`. | `event`. |
-| `dev` | server C# | Not ensured in prod. Live-check helpers, the `CALL` probe, entity counts. No test harness. | — |
+| `dev` | server C# | Not ensured in prod. `devprobe` is `MySql.Single` (no `CALL`). `devcounts` and a minute tick report entity counts. `survey` prints the server ped point and does not insert (F066). No test harness. | — |
 
 `ox_lib` is not a dependency. oxmysql is the database. Every server resource that writes calls its exports. We do not write its Lua shim. See [Persistence](#persistence) and decision 22.
 
@@ -483,7 +483,7 @@ There is no single FIFO queue to alert on. `lib.db` records `CALL` latency. Aler
 |---|---|---|
 | MariaDB down | Mutations fail | `db.call` returns not-ok. Action refused with a toast. Tick flush buffers dirty rows, bounded. Players keep moving. No item dupes, because nothing commits. |
 | Procedure deadlock / 1020 | One action refused | `EXIT HANDLER` rolls back. Isolation is already `READ COMMITTED` inside the procedure. Log `code`. |
-| Pool returns a nested result for `CALL` | Wrapper would mis-read `ok` | Spike S3. Refuse to start `items` if a probe `CALL` does not return the flat row. |
+| Pool returns a nested result for `MySql.Single` | Caller would mis-read `ok` | F011 `devprobe`. Refuse to start `items` if that probe does not return the flat row. |
 | Client spoofs a pickup or a hit | Rejected | `source` session, distance, procedure predicate, weapon hash equals held item, rate limit. |
 | Client writes a state bag | Rejected by `sv_stateBagStrictMode` | Server is the only writer. |
 | Client spawns a networked entity | Rejected by lockdown, and by `entityCreating` | Log once, not per frame. |
@@ -533,7 +533,7 @@ MTA issue numbers are `VIRUXE/scavengesurvive-mta#N`. FiveM issues #1, #3, #4, #
 | F008 | infra | replace | `server.cfg`: OneSync infinity, population off, lockdown, state-bag strict mode, filter control, build 3570, `sv_maxclients 200`. | — | server.cfg |
 | F009 | world | replace | Population belt: convar, bucket flag, client density loop, `entityCreating` cancel. | — | world |
 | F010 | infra | port | `logs` resource. `log.event` shape from MTA `CLAUDE.md`. Stdout JSON. Optional Loki. No token values. | logs design 2026-11-04 | logs |
-| F011 | infra | replace | `dev` not started in prod. Survey helper and the `CALL` probe. No test suite. | #15 | dev |
+| F011 | infra | replace | `dev` not started in prod. Statement probe through `MySql.Single`, entity counts, survey helper that prints the point. No `CALL`. No test suite. The loot insert is F066. | #15 | dev |
 | F012 | infra | port | License split: Unlicense for new code, MPL-2.0 for ported catalogues. No CC BY-SA map files, because SA maps are not shipped. | spec ADR 0005 | repo |
 | F013 | infra | port | Conventions doc in the FiveM repo: event names, ids not handles, no global session classes, dump-after-DDL. | CLAUDE.md | docs |
 | F014 | persistence | port | Settings seed: scarcity keys, ping limit, combat-log window, despawn minutes. No SA coordinates. | #44, ADR 0001 | sql |
@@ -809,17 +809,19 @@ Stdout is the record. Loki is optional. `logs_url` empty means no push. A URL in
 
 Once a minute, `system.heartbeat` carries `players`, `peds`, `vehicles`, `objects`, `entities`, `queued_lines`, and `uptime_s`. Projection rows and dirty tick rows wait until `items` exports them. `logs_webhook` (empty unless `env.cfg` sets it) receives `{"content":"..."}` for MariaDB failure kinds `db.connectFailed` and `db.queryFailed`, for `db.callFinished` p95 above `logs_slow_ms` across a 5 minute window, and for `entities` above 1,500. A game refusal (`ok` false and a `code`) is not an alert. `logs` is the only resource that calls `PerformHttpRequest`.
 
+**F011, 2026-11-06.** Spike S3 is cancelled (decision 22). `dev` does not `CALL item_give`. It is not in `resources.cfg`. On start, and from the restricted command `devprobe`, it runs `MySql.Single` for one flat `ok`, `code`, `payload` row (`SELECT 1 AS ok, 'READY' AS code, CAST(NULL AS CHAR) AS payload`), then a type select (`NULL`, `DECIMAL(10,2)`, `FLOAT`, `ST_X` and `ST_Y` of `POINT(4000.5 1200.25)`), then `SELECT 1 FROM dev_missing_table`, then `COUNT(*)` from `accounts` before and after. The pass is one flat row, `ok` numeric, `payload` null, and the account count unchanged. `devcounts`, the start, and a minute tick emit `dev.counted` (`players`, `peds`, `vehicles`, `objects`, `entities`). `survey` prints the server ped point, heading, and routing bucket, with an optional table name and zone. It does not insert. F066 writes the loot row. There is no test suite. The running FXServer had an empty `rcon_password` (`rcon_password` is read-only after startup), so this slice did not `restart dev`. The flat-row result is not recorded yet. Issue #21 stays open until that `dev.probed` line is in the log.
+
 ## Rollout Plan
 
 There are no feature flags in the MTA port and none are added here. A milestone is playable or it is not started. Prod is one server. Rollback of a bad resource is the previous git revision of that resource, then qrcon `restart` of that resource only. The database is ahead of the code only when a procedure changed, so a procedure change ships in the same revision as its callers and the rollback is "restore the dump taken before that revision". Player data is not migrated from MTA or from the spike.
 
-Order is M0 through M8 below. Do not start M2 until S3 (the `CALL` probe) is written into `docs/` as a result. Do not start M4 PvP until S2 (the pistol does no native damage) is written down.
+Order is M0 through M8 below. Do not start M2 until the F011 statement probe is written into `docs/` as a result. Do not start M4 PvP until S2 (the pistol does no native damage) is written down.
 
 ### Roadmap
 
 | Milestone | Deliverables | Exit criteria |
 |---|---|---|
-| M0 Bootstrap and data | F001–F014. C# resources start and stop clean. Schema loaded. Catalogues loaded. Spikes S1–S3 written up. Population belt visible as an empty street. | A server with an empty database boots, the `item_give` probe returns one flat row, no ambient peds in south LS, build reported as 3570. |
+| M0 Bootstrap and data | F001–F014. C# resources start and stop clean. Schema loaded. Catalogues loaded. Spikes S1, S2, and S4–S6 written up. S3 is cancelled (decision 22). Population belt visible as an empty street. | A server with an empty database boots, the F011 `devprobe` statement returns one flat row, no ambient peds in south LS, build reported as 3570. |
 | M1 Auth and character | F015–F040 and F151 (poses). Card login, bans, one character, food and bleed ticks, death, tutorial bucket, C# HUD bars. | Two clients register, spawn in south LS, starve, die, and come back as a new character. Hands up blocks item use once items exist. Stats survive a resource restart. A banned license never gets a ped. Joins #1 and #3. |
 | M2 Items | F041–F064. Projection, pickup, inventory NUI, bags, use, cooking. | Two clients pick up the same item; exactly one procedure wins. Restarting `items` leaves rows in place and rebuilds local objects. A client event with someone else's item id is refused. |
 | M3 Loot and world | F065–F073, F075–F077, F080 as a recorded drop. South-LS points, budget, weather, clock, zones. Not F074. | The first district has loot, the allowance does not bank, weather changes without a client setting it, join does not spawn traffic. |
@@ -839,15 +841,15 @@ F074 (explosives) is owned by M6 / PR 14. It is not in PR 11. It does not slip p
 | GTA V weapon damage fights the wound model. A missed cancel means double damage or a native kill. | High | F083 and spike S2 are a gate. Reconcile health every second. `SetPedSuffersCriticalHits(false)`. No PvP milestone before the spike is written down. |
 | OneSync entity cap if every world item is an entity. Infinity documents 65535 ids; that is still the wrong design, and the interaction with `onesync_population false` is not verified (`citizenfx/fivem#2751`). | High | Loose items are local objects (F043). Alarm at 1,500 networked script entities. Spike S1 confirms local `CreateObject` under lockdown. |
 | A public repo makes a committed secret world-readable. | Medium | `env.cfg` is gitignored. Secret scanning and push protection are on. Docs live in the repo. Do not design a Pages site. |
-| `CALL` on the chosen C# path may return a nested result set or drop `ok`. The Mono host may also refuse a raw MySQL socket. | High | Spike S3 gates M2 and probes `item_give`, not `item_pickup`. Unwrap one row. If the socket fails, call oxmysql exports. Do not replace procedures with a C# transaction. |
+| A `MySql.Single` row comes back nested, or `ok` is not numeric. | High | F011 `devprobe` gates M2. One flat row. Decision 22 cancelled `CALL item_give` and the C# driver. Do not add a procedure wrapper. |
 | `sv_entityLockdown strict` might block the local objects the projection needs. | Medium | Spike S1. Fallback is `relaxed` plus `entityCreating` cancel. |
 | Population still spawns parked vehicles at high player counts (`citizenfx/fivem#3623`). | Medium | Three layers in F009. |
 | Prop gap: 345 item types and no SA models. A missing hash makes an item invisible or the crate fallback. | Medium | F007 resolves an unmapped prop to `prop_box_wood05a` so gameplay still runs. Author props for weapons, bags, and defences before M4 and M6 exit. Do not block M1. World objects that spawn that hash are F043. |
 | Recipe drift if someone copies the early M6 list or the stale #147 body. | Medium | F108 copies `craft.lua` after `04f4174`. The 29 names are already in that file. Barricade and the three invented crafts stay out. |
-| net452 cannot reference current MySqlConnector, so the driver path may be a dead end. | Medium | S3 measures the socket and the nuspec. oxmysql exports are the fallback. The TFM does not move. |
+| net452 cannot reference current MySqlConnector, so the driver path may be a dead end. | Medium | Recorded 2026-11-06. MySqlConnector 2.1.13 `net45` cannot load. oxmysql is the path. The TFM does not move. |
 | Solo developer, 158 rows. | Medium | Milestones are ordered. Deferrals are allowed to stay open. No test-suite work. |
 | OneSync above 48 players costs a Cfx subscription. | Low | Recorded. Not required to build M0–M2 locally under 48. |
-| Float32 coordinates at LS scale (~1 mm). | Low | Accepted. S3 checks a round trip of a known coordinate. |
+| Float32 coordinates at LS scale (~1 mm). | Low | Accepted. F011 `devprobe` checks `ST_X` / `ST_Y` of a known point. |
 | Adaptive Card login is a different UX from the MTA in-world dialog. | Low | Accepted. The player has no ped and no items until the account exists, which is the safer permadeath shape. |
 
 ## Open questions and day-1 spikes
@@ -862,10 +864,10 @@ The spikes below are measurements the first implementation week writes into `doc
 |---|---|---|---|
 | S1 | Does `sv_entityLockdown strict` allow client `CreateObject` with networking off? | A local prop appears and no networked entity is created by the client. | Use `relaxed` and cancel `entityCreating` for client-owned entities. Projection design stands. |
 | S2 | After cancelling `weaponDamageEvent` and zeroing weapon damage modifiers, does a pistol change the victim's `GetEntityHealth` before the server sets it? | Health unchanged until `SetEntityHealth`. | Add whatever extra client modifier the build requires. Do not ship a parallel HP system that trusts the game's damage. |
-| S3 | On the access path that actually loads (net452 driver socket, or `Exports["oxmysql"]`), does `CALL item_give(0, 0, 0)` return one flat `{ok, code, payload}` row, and does a forced SQL exception roll back? | One row, `ok` numeric, payload JSON text. `item_give` does not touch `interior` or `dimension`. A bad call leaves the row unmoved. | Unwrap the status packet, or switch to the other path. Do not replace procedures with a C# transaction. Do not probe `item_pickup` until the row that loads it has rewritten the body. F005 dropped the columns and did not load procedures. |
+| S3 | Cancelled by decision 22. F011 `devprobe` is the replacement: one `MySql.Single` row, not `CALL item_give`. | One flat row, `ok` numeric, `payload` null. A bad statement leaves `accounts` unchanged. | Record the CLR types from `dev.probed`. Do not add a procedure wrapper. |
 | S4 | With `onesync_population false` on this server build, what is the networked object id width, and do parked vehicles still appear (`citizenfx/fivem#2751`, `#3623`)? | Record the number. Population absent with all three layers. | Keep loot off the entity path regardless. Tighten the `entityCreating` filter. |
 | S5 | bcrypt routine produces a 60-character `$2a$` or `$2b$` hash at cost 10 that verifies. | Fits `accounts.password_hash`. | Swap the routine before any account is created. Column width stays. |
-| S6 | Type round trip on the same path as S3: NULL, a DECIMAL fuel value, a FLOAT coordinate near `4000.5`, a `POINT` read back via `ST_X`/`ST_Y`. | Coordinate error under 1 cm. NULL is null, not a false-like zero. | Normalise in `Db.Call`. Do not `SELECT pos`. |
+| S6 | Type round trip on the F011 `MySql.Single` path: NULL, a DECIMAL fuel value, a FLOAT coordinate near `4000.5`, a `POINT` read back via `ST_X`/`ST_Y`. | Coordinate error under 1 cm. NULL is null, not a false-like zero. | Record the CLR types on `dev.probed`. Do not `SELECT pos`. Do not add `Db.Call`. |
 
 ## References
 
@@ -962,7 +964,7 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 
 - **Title:** feat(items): item graph, projection, inventory NUI
 - **Files:** `items/**`, `hud` NUI, procedures whose signatures changed
-- **Depends on:** PR 8, and S3 recorded
+- **Depends on:** PR 8, and the F011 statement probe recorded
 - **Description:** Pickup, drop, give, bags, containers, projection, ground-Z clamp, disallow rules, animations. Live check: two clients race one item. Commit the rebuilt root DLLs. F041–F048, F063.
 
 ### PR 10 — Item behaviours that do not need the map
