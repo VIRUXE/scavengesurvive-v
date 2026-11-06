@@ -1,3 +1,4 @@
+using System;
 using CitizenFX.Core;
 
 namespace Server
@@ -6,7 +7,13 @@ namespace Server
     {
         public Main()
         {
+            EventHandlers["playerAuthenticated"] += new Action<string, string>(OnAuthenticated);
             Debug.WriteLine("character server started.");
+        }
+
+        void OnAuthenticated(string source, string lastPosition)
+        {
+            TriggerClientEvent("player:spawn", source, lastPosition ?? "");
         }
     }
 }

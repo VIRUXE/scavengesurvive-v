@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using CitizenFX.Core;
 using CitizenFX.Core.Native;
@@ -73,6 +74,24 @@ namespace Client
 
             for (int i = 0; i < Scenarios.Length; i++)
                 API.SetScenarioTypeEnabled(Scenarios[i], false);
+
+            API.SetArtificialLightsState(true);
+            API.SetArtificialLightsStateAffectsVehicles(false);
+            API.NetworkOverrideClockTime(0, 0, 0);
+            API.PauseClock(true);
+
+            EventHandlers["time:set"] += new Action<int>(hour =>
+            {
+                API.NetworkOverrideClockTime(hour, 0, 0);
+                Debug.WriteLine("Clock override: Time set to " + hour);
+            });
+            EventHandlers["weather:set"] += new Action<string>(weather =>
+            {
+                API.SetWeatherTypeNowPersist(weather);
+                API.BeginTextCommandThefeedPost("STRING");
+                API.AddTextComponentSubstringPlayerName("Weather set to " + weather);
+                API.EndTextCommandThefeedPostTicker(false, true);
+            });
 
             Tick += Belt;
             Debug.WriteLine("world client started.");

@@ -8,6 +8,12 @@ namespace Server
         public string Name;
         public Dictionary<string, string> Identifiers;
         public string[] Tokens;
+        public int AccountId;
+        public string Username;
+        public string Email;
+        public string LastPosition;
+        public bool HasAccount;
+        public bool Spawned;
     }
 
     static class Sessions
@@ -35,6 +41,13 @@ namespace Server
             BySource.Remove(oldSource);
             session.Source = newSource;
             BySource[newSource] = session;
+        }
+
+        public static Session Get(string source)
+        {
+            Session session;
+            BySource.TryGetValue(source, out session);
+            return session;
         }
 
         public static void End(string source)

@@ -45,7 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Main.cs" />
+    <Compile Include="*.cs" />
     <Compile Include="..\Shared\**\*.cs" />
   </ItemGroup>
   <ItemGroup>

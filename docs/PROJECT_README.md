@@ -2,7 +2,7 @@
 
 Tracks the port on private `VIRUXE/scavengesurvive-v`. Gameplay resources are C#. Behaviour comes from the MTA port.
 
-The gamemode resources are C# and live in `resources/[scavengesurvive]/`. The project Lua resources (`player`, `game`, `vehicle`, `admin`, and the Lua `world`) have been removed. The scenario suppression list from that `world` client now lives in the C# `world` client. The empty `popcycle.dat` from the 2023 repo was not brought over.
+The gamemode resources are C# and live in `resources/[scavengesurvive]/`. They are started from `resources.cfg`. The project Lua (`player`, `game`, `vehicle`, `admin`, and the Lua `world`) has been removed after its behaviour was moved into `auth`, `character`, `data`, `staff`, `vehicles`, and `world`. Vendor resources (`oxmysql`, `ox_lib`, `[maps]`, vMenu) stay. The Discord bot stays the node resource.
 
 Design: `docs/superpowers/specs/2026-11-06-scavengesurvive-fivem-port-design.md`
 
