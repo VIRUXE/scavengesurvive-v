@@ -20,6 +20,7 @@ namespace Server
             EventHandlers["playerDropped"] += new Action<Player, string>(OnDropped);
             EventHandlers["player:spawned"] += new Action<Player>(OnSpawned);
             API.RegisterCommand("authcapture", new Action<int, List<object>, string>(OnCapture), true);
+            API.RegisterCommand("authrecord", new Action<int, List<object>, string>(OnRecord), true);
             Debug.WriteLine("auth server started. capture on playerConnecting.");
         }
 
@@ -106,6 +107,34 @@ namespace Server
             sample.TryGetValue("license", out license);
             Debug.WriteLine("[auth] capture sample " + Identifier.Summary(sample, sampleTokens)
                 + " license_value=" + (license ?? ""));
+        }
+
+        async void OnRecord(int source, List<object> args, string raw)
+        {
+            string line = null;
+            try
+            {
+                Links.Probe(result => line = result);
+                for (int i = 0; i < 80 && line == null; i++)
+                    await Delay(100);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] authrecord failed: " + ex.GetType().Name);
+                return;
+            }
+
+            if (line == null)
+            {
+                Debug.WriteLine("[auth] authrecord failed step=timeout");
+                MySql.Update(
+                    "DELETE FROM accounts WHERE name IN ('f016a', 'f016b')",
+                    new object[0],
+                    new Action<dynamic>(unused => { }));
+                return;
+            }
+
+            Debug.WriteLine("[auth] authrecord " + line);
         }
 
         static Dictionary<string, object> ConnectedFields(Session session)
@@ -352,29 +381,33 @@ namespace Server
                 return;
             }
 
-            session.HasAccount = true;
-            session.AccountId = id;
-            session.Username = username;
-            session.Email = email;
-            session.LastPosition = string.IsNullOrEmpty(lastPosition) ? null : lastPosition;
-
-            foreach (KeyValuePair<string, string> identifier in session.Identifiers)
+            Links.Record(id, session.Identifiers, session.Tokens, new Action<RecordResult>(result =>
             {
-                MySql.Update(
-                    "INSERT INTO account_identifiers (account_id, type, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1",
-                    new object[] { id, identifier.Key, identifier.Value },
-                    new Action<dynamic>(unused => { }));
-            }
+                var fields = new Dictionary<string, object>();
+                fields["player"] = source;
+                fields["account_id"] = id;
+                fields["identifier_count"] = result == null ? 0 : result.IdentifierCount;
+                fields["token_count"] = result == null ? 0 : result.TokenCount;
+                fields["taken_count"] = result == null ? 0 : result.TakenCount;
+                if (result == null || !result.Ok)
+                {
+                    fields["ok"] = false;
+                    fields["code"] = "write_failed";
+                    Note("session.recorded", fields);
+                    Present(deferrals, source, "Could not store this sign-in. Try again.", username, null);
+                    return;
+                }
 
-            for (int i = 0; i < session.Tokens.Length; i++)
-            {
-                MySql.Update(
-                    "INSERT INTO account_tokens (account_id, token) VALUES (?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1",
-                    new object[] { id, session.Tokens[i] },
-                    new Action<dynamic>(unused => { }));
-            }
-
-            deferrals.done();
+                session.HasAccount = true;
+                session.AccountId = id;
+                session.Username = username;
+                session.Email = email;
+                session.LastPosition = string.IsNullOrEmpty(lastPosition) ? null : lastPosition;
+                fields["ok"] = true;
+                fields["code"] = "recorded";
+                Note("session.recorded", fields);
+                deferrals.done();
+            }));
         }
 
         static string Card(string message, string username, string password)

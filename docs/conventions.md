@@ -43,7 +43,7 @@ On the oxmysql path that F011 measured: a SQL `NULL` is CLR null, a `DECIMAL` co
 
 ## Auth capture
 
-`auth` reads identifiers once, on `playerConnecting`, after `deferrals.defer` and one tick. The types are `license`, `license2`, `discord`, `fivem`, `steam`, `xbl`, `live`, and `ip`. The value is the part after the first `:`. A missing `license` refuses the connection. Tokens are read once into the session. They are not logged, not written to a state bag, and not inserted by this row. `playerJoining` remaps the same session. `session.connected` is the log line that carries the identifier values. `session.refused` with `code` `no_license` is the refusal. Writing `account_identifiers` and `account_tokens` is F016. The card and bcrypt are F017.
+`auth` reads identifiers once, on `playerConnecting`, after `deferrals.defer` and one tick. The types are `license`, `license2`, `discord`, `fivem`, `steam`, `xbl`, `live`, and `ip`. The value is the part after the first `:`. A missing `license` refuses the connection. Tokens are read once into the session. They are not logged and not written to a state bag. `playerJoining` remaps the same session. `session.connected` is the log line that carries the identifier values. `session.refused` with `code` `no_license` is the refusal. Once an account id exists, `auth` writes `account_identifiers` and `account_tokens` in one transaction. A `(type, value)` owned by another account stays there. The same token may sit on two accounts. `session.recorded` carries the counts. Token strings stay out of the log. The card and bcrypt are F017.
 
 ## Logs
 
