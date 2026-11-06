@@ -8,7 +8,7 @@ namespace Client
         {
             string app = API.GetConvar("discord_app_id", "");
             if (app.Length > 0) API.SetDiscordAppId(app);
-            API.SetDiscordRichPresenceAction(0, "Discord", API.GetConvar("discord_invite_url", "https://discord.gg/wTtgsTdDRy"));
+            API.SetDiscordRichPresenceAction(0, "Discord", API.GetConvar("discord_invite_url", "https://discord.gg/AvEDRJhn2w"));
         }
     }
 }

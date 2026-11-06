@@ -1,16 +1,16 @@
 Config = {
     Token: GetConvar('discord_bot_token', ''),
     ClientID: GetConvar('discord_client_id', ''),
-    GuildID: '1396272318921052160',
+    GuildID: '1568167253965537293',
     Channels: { // Category: Channels
         Main: {
-            General: '1396272321181913131',
+            General: '1568169262718390342',
         },
         Gameserver: {
-            Chat: '1400135601289822390',
+            Chat: '1568169271140290621',
         },
         Staff: {
-            Staff: '1396273895304073377',
+            Staff: '1568169282381287434',
         }
     }
 }
