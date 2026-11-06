@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "fivem": {
+      "command": "bash",
+      "args": ["tools/fivem-mcp.sh"]
+    }
+  }
+}

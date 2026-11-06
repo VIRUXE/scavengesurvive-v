@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "local-fivem": {
+      "source": {
+        "source": "directory",
+        "path": ".claude/marketplace"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "qbx-lua@local-fivem": true
+  },
+  "enabledMcpjsonServers": ["fivem"]
+}

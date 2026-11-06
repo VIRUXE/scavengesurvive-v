@@ -62,3 +62,9 @@ A resource restarts alone: qrcon `restart <resource>` on `127.0.0.1:30120`. The 
 There is no test suite. Live checks are the record.
 
 New code is the Unlicense (`LICENSE`). The generated catalogues are MPL-2.0. Secrets (`mysql_connection_string`, `sv_licenseKey`, `discord_bot_token`, `rcon_password`) stay in `env.cfg`.
+
+## Editors
+
+`fivem-mcp` 0.2.0 is the project FiveM MCP. Install it with `npm install -g fivem-mcp@0.2.0` so `fivem-mcp` is on `PATH`. `.mcp.json` is the Claude server. `.grok/config.toml` is the Grok server. `.codex/config.toml` is the Codex server. All three run `tools/fivem-mcp.sh`. The published bin is a symlink, and the server starts only when Node is given the real `index.mjs`, so the wrapper does that. The server is docs, natives, a Lua audit, and stack detection. It does not send console commands.
+
+`qbx-lint` and `qbx-lua-ls` 1.1.0 are the FiveM Lua tools. They are not in this repo. Both must be on `PATH`. Claude loads `qbx-lua-ls` for `.lua` from `.claude/marketplace` (`qbx-lua@local-fivem`). Codex on this host has no language-server slot, so it uses the same binaries from the shell.

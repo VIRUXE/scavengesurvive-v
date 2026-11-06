@@ -1,0 +1,8 @@
+{
+  "qbx-lua": {
+    "command": "qbx-lua-ls",
+    "extensionToLanguage": {
+      ".lua": "lua"
+    }
+  }
+}

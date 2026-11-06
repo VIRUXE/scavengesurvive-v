@@ -1,0 +1,4 @@
+[mcp_servers.fivem]
+command = "bash"
+args = ["tools/fivem-mcp.sh"]
+enabled = true

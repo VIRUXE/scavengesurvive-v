@@ -1,0 +1,8 @@
+{
+  "name": "qbx-lua",
+  "description": "Qbox Lua language server for FiveM and CfxLua. Requires qbx-lua-ls 1.1.0 on PATH.",
+  "version": "1.1.0",
+  "author": {
+    "name": "Qbox-project"
+  }
+}
