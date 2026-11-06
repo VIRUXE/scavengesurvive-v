@@ -3,7 +3,7 @@ const path = require('path');
 const { REST, Routes } = require('discord.js');
 
 const commands = [];
-const commandsPath = path.join('resources', 'discord', 'commands');
+const commandsPath = path.join(GetResourcePath(GetCurrentResourceName()), 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 console.log(commandFiles);
@@ -46,6 +46,6 @@ const rest = new REST({ version: '10' }).setToken(Config.Token);
 
         console.log('Successfully reloaded application (/) commands.');
     } catch (error) {
-        console.error(error);
+        console.error('Failed to reload application commands: ' + (error.message || error.code || 'request failed'));
     }
 })(); 
