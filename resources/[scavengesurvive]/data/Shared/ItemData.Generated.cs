@@ -2,7 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 //
-// Ported from VIRUXE/scavengesurvive-mta data/generated. F006.
+// Derived from Southclaws/ScavengeSurvive (MPL-2.0), via
+// VIRUXE/scavengesurvive-mta data/generated. See NOTICE.md. F006.
 // SA model ids, attach offsets, wear offsets, and defence geometry are not copied.
 // Recipes are not in this file (F108). Prop and WeaponHash are 0 on every row (F007).
 // Catalogue.PropHash resolves 0 to prop_box_wood05a. F081 writes real weapon hashes.
