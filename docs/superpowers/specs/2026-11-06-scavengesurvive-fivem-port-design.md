@@ -28,7 +28,7 @@ Two earlier FiveM trees exist and are not the baseline. The 2023 repository is t
 | Tree | Where | What it is | What this port uses it for |
 |---|---|---|---|
 | MTA port | `/gta/sa/mta/servers/scavengesurvive/scavengesurvive-mta`, public `VIRUXE/scavengesurvive-mta` | Finished gamemode. MariaDB schema in `sql/schema.sql` (2,685 lines, dumped live). 345 item types in `resources/[scavengesurvive]/data/generated/item_types.lua`. 11,066 loot rows in `sql/seed/0002_loot_spawns.sql`. 2,017 vehicle points in `sql/seed/0004_vehicle_spawns.sql`. Conventions in `CLAUDE.md`. | Behaviour, schema, procedures, event names, scarcity rules. Read only. Not modified by this plan. |
-| 2023 FiveM repo | `VIRUXE/fivem-scavengesurvive`, deleted 2026-11-06 after the useful parts moved here | Empty Lua stubs (`inventory`, `item`, `door`, `button`, `crafting`), stock CitizenFX resources, and an empty `popcycle.dat`. | Not used. The C# skeleton, the scenario list, the vehicle-name note, and issues #1, #3, #4, and #5 were copied. The GitHub repository is deleted. |
+| 2023 FiveM repo | `VIRUXE/fivem-scavengesurvive`, archived 2026-11-06 after the useful parts moved here | Empty Lua stubs (`inventory`, `item`, `door`, `button`, `crafting`), stock CitizenFX resources, and an empty `popcycle.dat`. | Not used. The C# skeleton, the scenario list, the vehicle-name note, and issues #1, #3, #4, and #5 were copied. The GitHub repository is archived. |
 | 2025 spike | `/gta/v/fivem/servers/scavengesurvive`. Remote recreated 2026-11-06 as private `https://github.com/VIRUXE/scavengesurvive-v`, tip `ac96399`. Still Lua. 40 first-party `*.lua`/`*.js` files, **3,726** lines, excluding `ox_lib`, `oxmysql`, `vMenu`, `node_modules`, and `[maps]` (`wc -l`). | oxmysql 2.13.1, ox_lib, a deferral login, `schema.sql` with email accounts, commented-out population suppression, vMenu, third-party ymaps. | Behaviours to reimplement in C#, and behaviours to leave. No file is imported. See [2025 spike: keep and drop](#2025-spike-keep-and-drop). |
 
 `VIRUXE/fivem` is a stale citizen fork (0 ahead, 115 behind) and is not the tracker. Engine facts below come from public docs at `https://docs.fivem.net` and from the vendored oxmysql 2.13.1 manifest in the spike. No leaked GTA V source was read.
@@ -755,7 +755,7 @@ The spike already has oxmysql, a deferral, and a population convar. Rejected. Th
 
 ### 2. Home is `scavengesurvive-v` (chosen)
 
-Chosen on 2026-11-06, after `fivem-scavengesurvive` had been the tracker only because this remote was missing. The 2023 repository is deleted. What moved is the design, the C# skeleton, the scenario suppression list, and the vehicle-name note. Empty Lua stubs and stock CitizenFX resources did not move. The MTA schema and catalogues are imported as data, not as a git subtree of the MTA repo. Cost: a new C# tree and a re-authored map. That cost is the port.
+Chosen on 2026-11-06, after `fivem-scavengesurvive` had been the tracker only because this remote was missing. The 2023 repository is archived. What moved is the design, the C# skeleton, the scenario suppression list, and the vehicle-name note. Empty Lua stubs and stock CitizenFX resources did not move. The MTA schema and catalogues are imported as data, not as a git subtree of the MTA repo. Cost: a new C# tree and a re-authored map. That cost is the port.
 
 ### 3. One monolith resource
 
@@ -857,7 +857,7 @@ The spikes below are measurements the first implementation week writes into `doc
 - MTA schema: `scavengesurvive-mta/sql/schema.sql`
 - MTA catalogues: `resources/[scavengesurvive]/data/generated/`
 - MTA issues cited inline. Tracker `VIRUXE/scavengesurvive-mta`. Open as of this writing: #40, #46, #57, #67, #96, #99, #100, #127, #134, #138, #147, #154, #155, #156, #157, #158, #159, #160, #161.
-- FiveM tracker: private `VIRUXE/scavengesurvive-v`. The 2023 repository `VIRUXE/fivem-scavengesurvive` was deleted after this move.
+- FiveM tracker: private `VIRUXE/scavengesurvive-v`. The 2023 repository `VIRUXE/fivem-scavengesurvive` was archived after this move.
 - 2025 spike (read only): `/gta/v/fivem/servers/scavengesurvive/`
 - OneSync, routing buckets, entity lockdown, culling: `https://docs.fivem.net/docs/scripting-reference/onesync/`
 - Server commands (onesync, `onesync_population`, `sv_entityLockdown`, `sv_enforceGameBuild` including build 3570, `sv_maxclients`, `sv_stateBagStrictMode`, `sv_filterRequestControl`): `https://docs.fivem.net/docs/server-manual/server-commands/`
