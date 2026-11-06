@@ -2,7 +2,7 @@
 
 Working rules for the FiveM port of Scavenge & Survive. F013. The behaviour spec is `docs/superpowers/specs/2026-11-06-scavengesurvive-fivem-port-design.md`. The session steps are `docs/process.md`. This file is the FiveM stand-in for MTA `CLAUDE.md`.
 
-Gameplay resources are C# under `resources/[scavengesurvive]/<name>/`. There is no Lua gameplay and no `shared/events.lua`. `dev` is not ensured.
+Gameplay resources are C# under `resources/[scavengesurvive]/<name>/`. There is no Lua gameplay and no `shared/events.lua`. `dev` is not ensured. The client and UI rules are decision 25 and `docs/superpowers/specs/2026-11-06-scavengesurvive-fivem-client-ui-design.md`.
 
 ## Events
 
@@ -14,6 +14,8 @@ Names are `<subject><PastTenseVerb>` camelCase. Examples already in the spec: `i
 - Handlers: `[EventHandler("itemPickupRequested")]` or `EventHandlers["itemPickupRequested"] += ...`.
 
 The C# method is the declaration. Each resource does not keep a shared event list file.
+
+The rule has no exception for the client or the NUI. A NUI message `type` and a `RegisterNuiCallbackType` name are `<subject><PastTenseVerb>` too (`dialogOpened`, `dialogResponded`). No colon, no `on`, no `Request` prefix, on any surface. The spike's colon-named events and the stock chat's message event are not called; a line to the chat box is `chatMessageShown` on the gamemode `chat` resource.
 
 ## Ids, not handles
 
@@ -44,6 +46,20 @@ On the oxmysql path that F011 measured: a SQL `NULL` is CLR null, a `DECIMAL` co
 ## Auth capture
 
 `auth` reads identifiers once, on `playerConnecting`, after `deferrals.defer` and one tick. The types are `license`, `license2`, `discord`, `fivem`, `steam`, `xbl`, `live`, and `ip`. The value is the part after the first `:`. A missing `license` refuses the connection. Tokens are read once into the session. They are not logged and not written to a state bag. `playerJoining` remaps the same session. `session.connected` is the log line that carries the identifier values. `session.refused` with `code` `no_license` is the refusal. Once an account id exists, `auth` writes `account_identifiers` and `account_tokens` in one transaction. A `(type, value)` owned by another account stays there. The same token may sit on two accounts. `session.recorded` carries the counts. Token strings stay out of the log. Register and login are the deferral Adaptive Card: name plus password, no email, no recovery card. The name is 1 to 22 letters, digits, or punctuation. The password is 4 to 32 bytes. The hash is bcrypt cost 10, `$2b$`, 60 characters, in `accounts.password_hash`. A wrong password counts toward 5 tries in 10 minutes, keyed by `license`. The fifth closes the deferral. An inactive account is refused. `auth.getAccountId` and `auth.getAdminLevel` return the session after the identifier write. Passwords and hashes are not logged. When `settings` `auth.license_autologin` is on (a missing row is on), one `license` row resumes that account and logs `session.authenticated` with `method` `license`. `0` shows the card. A new license shows the card. `license2` and `last_ip` are not a login. `player.auto_ip_login` is not read. An inactive account is refused before the card. Before that resume, the deferral matches the captured identifiers and tokens against `ban_identifiers`. A hit logs `session.banned` and closes the deferral. Token strings stay out of the log. `staff_ban` is statements in `auth`: one `bans` row, the `ban_identifiers` set, and one `staff_actions` row. There is no procedure and no `CALL`. An active ban on that name returns `ALREADY_BANNED`. When `settings` `server.whitelist` is on, a level-0 name that is not in `whitelist` is refused before `deferrals.done`. Players already in get `server.whitelist_kick_s` seconds, 300 when that row is missing or not a positive number, and then a drop. `server.whitelist_auto` turns the switch off while a level-2 session is in and on when the last one leaves. `auth` exports the switch. The `/whitelist` command stays on the staff rows. The exports do not write `settings`.
+
+## Client surfaces
+
+The always-on HUD is C# draws from the `hud` draw kit: bars, hunger, ammo, watch, key-action list, vehicle panel, dashboard, hold bar, action text, tips, low-HP darkening, 3D labels, nametags, voice icons. No browser draws the HUD. The `hud` Svelte page holds the dialogs: inventory, list and input dialogs, info windows, keypad, radio panel, tweak pad, staff lists, death screen. The `chat` Svelte page holds the chat box. Focus is taken only while a dialog or the chat input is open.
+
+NUI pages are Svelte + Vite under `web/` of `hud` and `chat`. `web/dist` and `web/node_modules` are gitignored. A `web/src` change ships through `tools/nui-build.sh <resource>`, which builds on the server and then runs the one qrcon restart. The NUI never calls MariaDB and never learns another player's identifier. A mutating NUI callback carries the `lib` one-shot token.
+
+Keys are `RegisterKeyMapping` commands: `interact` F, `dropitem` G, `putaway` Y, `inventory` H, `reloadweapon` R, `vehiclelock` L, `staffpanel` P, `unloadweapon` unbound. N is FiveM's push-to-talk and is not taken. Hold thresholds are detected on the client; the server times every action. No literal key bind outside dialog keys.
+
+`SetEntityHealth` has no server RPC. The owner client writes health from `characterHealthSynced`. `spawnmanager` and `sessionmanager` are not on this host; `character` owns spawn, death, and respawn.
+
+State bags are server-written and hold unames and flags, never contents: `held`, `holster`, `bag`, `hat`, `mask`, `armour`, `cuffed`, `torch`, `ammo`, `knockedOut`, `bleeding`, `duty`, `lang` on players; `vehicleId`, `type`, `fuel`, `locked`, `engine`, `lights`, `battery`, `bay`, `loose`, `carmour`, `doorHp`, `gasBottles`, `cargo`, `containerId` on vehicles; `defenceId`, `hitpoints` on defences.
+
+A client claim (`weaponHitReported`, `groundSurfaceReported`, `fishCastRequested`, `itemPickupRequested` blocked ids, `parachuteSpent`, `playerJumped`, `anticheatFocusChanged`, `carmourAttachRequested`, `holdActionCancelRequested`, `characterSpawnFinished`, `dialogResponded`) is checked on the server as companion §18 lists.
 
 ## Logs
 

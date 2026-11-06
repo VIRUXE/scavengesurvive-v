@@ -62,7 +62,7 @@ The preliminary table in `docs/superpowers/specs/2026-09-27-scavengesurvive-mta-
 - Player experience of the MTA port, on Los Santos, for 100 players with headroom toward 200.
 - Many resources, no prefix. MariaDB is the only shared state. One stored-procedure call is the atomic unit, not a Lua transaction.
 - Port the essence. Recompute every area as `port`, `replace`, `drop`, or `defer` for FiveM.
-- A port matrix a later step can file as roughly 120–160 issues. This document has **158** rows (F001–F158). Epics are not rows.
+- A port matrix a later step can file as roughly 120–160 issues. This document has **180** rows (F001–F180). F159–F180 are the client and UI rows added on 2026-11-06 (decision 25). Epics are not rows.
 - Old issues #1, #3, #4, #5 stay open. The matrix says which epic each joins.
 
 ### Non-Goals
@@ -82,10 +82,10 @@ These are the approved constraints, recorded so a later issue does not reopen th
 1. **Behaviour source is the finished MTA port.** Where an MTA issue records a decision, cite `VIRUXE/scavengesurvive-mta#N`. Do not re-read the Pawn to invent a second behaviour. Open bugs whose bodies still match missing code (#154, #155, #156, #158) are ported as those issues describe the gap. #67, #134, #138, and #147 are open in the tracker and shipped in the tree. Port the code, and treat the issue body as a tracker miss. #147's recipe list is `crafting/shared/logic/craft.lua`, not the issue text.
 2. **World is Los Santos, not San Andreas.** Names, sizes, recipes, loot weights, wound numbers, and the item graph transfer. Coordinates, object ids, skins, hat DFFs, and the 11,066 loot points do not. New points are authored on the GTA V map.
 3. **The tracker is public** `VIRUXE/scavengesurvive-v` (moved 2026-11-06 off the 2023 repo, and made public the same day by the owner). That reverses the earlier "keep it private" rule. Issues, milestones, labels, and commits are the tracker. Docs stay in the repo. No wiki and no GitHub Pages. Secret scanning and push protection are on. The way of working is `docs/process.md`. The C# projects live in `resources/[scavengesurvive]/`. The resource name `world` is that C# project. The old Lua world folder is `spike-lua/world` and is not scanned. `player` and `vehicle` are spike Lua names and are not gamemode resources.
-4. **Many resources, no prefix, MariaDB is the only shared state.** Domains: `lib`, `data`, `auth`, `character`, `items`, `crafting`, `apparel`, `weapons`, `vehicles`, `loot`, `building`, `world`, `hud`, `staff`. Infrastructure beside those: `logs`, `anticheat`, `dev`. No `maps` resource (the map is the game). No `ui` resource (`hud` owns the NUI page). No `explosives` resource: the shipped MTA `explosives` resource's behaviour lands in `world`. OneSync server entities. State bags for small replicated per-entity facts. Atomicity is one stored-procedure `CALL`, not a multi-statement transaction in C#.
+4. **Many resources, no prefix, MariaDB is the only shared state.** Domains: `lib`, `data`, `auth`, `character`, `items`, `crafting`, `apparel`, `weapons`, `vehicles`, `loot`, `building`, `world`, `hud`, `chat`, `staff`. Infrastructure beside those: `logs`, `anticheat`, `dev`. No `maps` resource (the map is the game). No `ui` resource (`hud` owns the dialog page; `chat` owns the chat page, decision 25). No `explosives` resource: the shipped MTA `explosives` resource's behaviour lands in `world`. OneSync server entities. State bags for small replicated per-entity facts. Atomicity is one stored-procedure `CALL`, not a multi-statement transaction in C#.
 5. **Every gamemode resource is C#** (user decision 2026-11-06). This overrides the earlier Lua 5.4 choice. Each resource is a solution in the shape of `VIRUXE/cfx-csharp-boilerplate`: a Client class library (`client.net.dll`), a Server class library (`server.net.dll`), and `Shared/**/*.cs` compiled into both. `fxmanifest.lua` stays because FiveM requires it, and it only declares the assemblies. The Mono runtime's target is **.NET Framework 4.5.2**. The boilerplate README says that framework is "at this time", the csproj sets `TargetFrameworkVersion` `v4.5.2`, and `CitizenFX.Core.Client` 1.0.7537 / `CitizenFX.Core.Server` 1.0.7538 resolve `lib/net45`. The current runtime page (`https://docs.fivem.net/docs/scripting-manual/runtimes/csharp/`) still describes that Mono workflow and says the template builds "the correct .NET Framework". It does not name a newer Mono TFM. FiveM for GTA V Enhanced replaces Mono with .NET 10; Enhanced is already out of scope (decision 16). The boilerplate TFM is not stale for Legacy. FXServer loads prebuilt DLLs (`client_script 'client.net.dll'`, and the first-script guide says the built DLL has to be in the resource folder). It does not run MSBuild. Both Debug and Release set `OutputPath` to the resource root (`..\`), the same place the manifest loads. The boilerplate's Release path `bin\Release\` is not used. Commit `client.net.dll` and `server.net.dll` beside `fxmanifest.lua` in every PR that changes a `.cs` file. Gitignore `bin/`, `obj/`, and NuGet `packages/`. Those directories are not the artifact.
 6. **Auth is the FiveM identifier set**, not MTA serials: `license`, `license2`, `discord`, `fivem`, `steam`, `xbl`, `live`, `ip`, and tokens. bcrypt cost 10, `char(60)` hashes. No Whirlpool import. No email account (the spike's `accounts.email` is dropped).
-7. **UI is NUI plus C# draws. `ox_lib` is not used.** It is Lua. Toasts, hold progress, and key hints are either the inventory NUI or a C# draw (`DrawRect` / text natives) so a fight does not keep a browser focused. The connecting Adaptive Card stays. HTML/JS/CSS for that one NUI page is a UI surface, not a gameplay resource. Not MTA dx, not SA-MP dialogs, not a CEF page per widget.
+7. **UI is NUI plus C# draws. `ox_lib` is not used.** It is Lua. The always-on HUD (bars, hunger, ammo, watch, key-action list, vehicle panel, hold bar, action text, tips, toasts, 3D labels) is C# draws (`DrawRect` / text natives) so a fight does not keep a browser focused. The NUI is for dialogs: inventory, list and input dialogs, keypad, radio panel, tweak pad, staff lists, death screen, and the chat box. There are two Svelte NUI pages, `hud` and `chat`, built on the server before the resource restart; `web/dist` is not committed (decision 25, 2026-11-06). The connecting Adaptive Card stays. Not MTA dx, not SA-MP dialogs, not a CEF page per widget. The client and UI design is `2026-11-06-scavengesurvive-fivem-client-ui-design.md`.
 8. **Damage is server-authoritative.** Cancel native health loss and apply the MTA wound model as `applyWound` and `wound.lua` actually run it: numeric count, kill on HP, no 32-wound cap. Weapons and vehicles are GTA V hashes. Population stays off.
 9. **Appearance is freemode** `mp_m_freemode_01` / `mp_f_freemode_01` components and props. No SA skins, no hatless DFF pipeline.
 10. **The 2025 Lua in this repo is a spike.** Behaviours to reimplement in C#, and behaviours to leave, are named below. Do not treat that Lua as the port. The tracker is this repo. The C# projects are in `resources/[scavengesurvive]/`.
@@ -103,6 +103,7 @@ These are the approved constraints, recorded so a later issue does not reopen th
 22. **SQL goes through oxmysql. There is no `Db.Call`.** Owner decision 2026-11-06. The C# import is `lib/Server/MySql.cs`, the same job as `@oxmysql/lib/MySQL.lua`. Each server project compiles that file and calls `MySql.Query`, `Single`, `Scalar`, `Update`, `Insert`, `Prepare`, `Raw`, or `Transaction` with placeholders. No C# MySQL driver. No procedure wrapper. No `CALL` gate. The MTA procedures stay the behaviour to reimplement as statements. Spike S3 is cancelled. Where an older paragraph still says `Db.Call` is the only path, this decision wins.
 23. **A finished slice updates the commit, the docs, and the issues together.** Owner rule 2026-11-06. Mandatory. `AGENTS.md` states it for every session. The steps are `docs/process.md`. A slice left with only code, or only a comment on a stale issue, is not done.
 24. **A resource restarts alone, through qrcon. The FXServer process stays up.** Owner rule 2026-11-06. `qrcon 127.0.0.1:30120` runs `restart <resource>` for the one resource that changed. The password is `rcon_password` in gitignored `env.cfg`. Peers stay running. No `fxmanifest` `dependency` may stop or restart another resource. Start order stays the `ensure` lines. A convar read only at process start is not a reason to restart the process unless the owner asks.
+25. **Client and UI.** Owner decisions 2026-11-06, recorded in `2026-11-06-scavengesurvive-fivem-client-ui-design.md` and rows F159–F180. The always-on HUD is C# draws (decision 7 stands). NUI pages are Svelte apps, one in `hud` for dialogs and one in `chat` for the chat box, built on the server by `tools/nui-build.sh <resource>` before the qrcon restart; `web/dist` is gitignored. A custom `chat` resource replaces the stock one. Voice is ported on Mumble: local 40 m always, global for everyone in global mode, radio by frequency, the staff channel only while `/a` is active; N stays push-to-talk. Drop, give, and unload move to G; F interact, Y put away, H inventory, R reload, P staff panel. Event names have no prefix on any surface, including NUI message types and NUI callback names. `SetEntityHealth` has no server RPC, so health is written by the owning client from `characterHealthSynced`. `spawnmanager` and `sessionmanager` are not on this host; `character` owns spawn, death, and respawn.
 
 ## Proposed Design
 
@@ -134,7 +135,7 @@ client_script 'client.net.dll'
 server_script 'server.net.dll'
 ```
 
-`hud` also declares `ui_page` and `files` for the one inventory NUI. No second `ui_page`. No `lua54`. No `shared_script` of Lua. Pure types that do not open a socket live in `Shared/**/*.cs` and are compiled into both assemblies (`<Compile Include="../Shared/**/*.cs" />`). No MySQL driver lives in any gamemode assembly. SQL is an oxmysql export call from the server script that needs it (decision 22). Client classes inherit `BaseScript`. Server classes inherit `ServerScript`, as the boilerplate's `Server/Main.cs` does. Both configurations set `<OutputPath>..\</OutputPath>` so `client.net.dll` and `server.net.dll` land next to `fxmanifest.lua`. Release does not write `bin\Release\`.
+`hud` and `chat` each declare `ui_page 'web/dist/index.html'` and `files { 'web/dist/**' }` for their Svelte page (decision 25). No other resource has a page. No `lua54`. No `shared_script` of Lua. Pure types that do not open a socket live in `Shared/**/*.cs` and are compiled into both assemblies (`<Compile Include="../Shared/**/*.cs" />`). No MySQL driver lives in any gamemode assembly. SQL is an oxmysql export call from the server script that needs it (decision 22). Client classes inherit `BaseScript`. Server classes inherit `ServerScript`, as the boilerplate's `Server/Main.cs` does. Both configurations set `<OutputPath>..\</OutputPath>` so `client.net.dll` and `server.net.dll` land next to `fxmanifest.lua`. Release does not write `bin\Release\`.
 
 Cross-resource contract, same as MTA `CLAUDE.md`: pass numeric ids, never entity handles. The manifest docs show the call shape (`https://docs.fivem.net/docs/scripting-reference/resource-manifest/`, Consuming an export, C#):
 
@@ -178,7 +179,8 @@ Start order is `server.cfg` `ensure` lines, which is also dependency order. A re
 | `loot` | server | Authored spawn points, `loot_roll`, ADR 0001 budget, supply drops, caches. | `rollNear`. Emits `lootSpawned` (server-local) which `items` turns into a projection delta. |
 | `building` | server + client | Defences, plot poles, keypads, motors, tweak. Server entities for placed defences. | `placeConstruction`. |
 | `world` | server + client | Population belt, weather, clock, LS zone polygons, fuel outlets, explosives, radio. Trees deferred. | `getZoneAt`. Emits `playerZoneEntered`, `playerZoneLeft`. |
-| `hud` | client + server C#, plus one NUI page | Inventory and body preview in HTML/JS/CSS. Status bars, key hints, and short toasts drawn in C#. `RegisterKeyMapping` for the five keys. No ox_lib. | Handles `inventoryOpened`, `toastShown`, `characterStatsSynced`. |
+| `hud` | client + server C#, plus one Svelte NUI page | The C# draw kit: bars, hunger, ammo, watch, key-action list, vehicle panel, dashboard, hold bar, action text, tips, 3D labels, nametags, voice icons. The Svelte page: inventory, list and input dialogs, info windows, keypad, radio panel, tweak pad, staff lists, death screen. `RegisterKeyMapping` for the key set (F, G, Y, H, R, L, P). No ox_lib. | Handles `inventoryOpened`, `toastShown`, `characterStatsSynced`, `dialogOpened`, `holdStarted`. Client exports for the draw kit. |
+| `chat` | client + server C#, plus one Svelte NUI page | Chat modes (local 40 m, global, radio, admin), player chat commands, join lines, MoTD, flood mute, the Discord bridge through the node `discord` export, and voice (Mumble targets by mode). Replaces the stock `chat`. | Handles `chatMessageSent`, `chatModeRequested`. Emits `chatMessageShown`, `chatCleared`, `chatModeChanged`, `voiceMuted`. |
 | `staff` | server + client | Level 1–5 commands, reports, spectate, mute, freeze, bug reports, settings. | Every privileged command goes through `staff`, logged to `staff_actions`. |
 | `anticheat` | server | Teleport reconcile, ping, focus loss, `entityCreating` population reject, detection fields. | Vetoes `itemPickupAttempted` for traps. |
 | `logs` | server | `log.event(kind, fields, level)` to stdout JSON. Optional Loki push, same kind names as MTA (`domain.pastTenseVerb`). The only resource that may `PerformHttpRequest`. | `event`. |
@@ -220,7 +222,7 @@ flowchart TB
   lib --> proc
   proc --> spatial
   items -->|latent projection payload| itemsC
-  weapons -->|SetEntityHealth from the wound total| character
+  weapons -->|characterHealthSynced to the owner client| character
 ```
 
 ### Client / server split and anti-spoof
@@ -269,7 +271,7 @@ That does not by itself stop the victim's game from applying local health loss, 
 - `SetPlayerHealthRechargeMultiplier(PlayerId(), 0.0)` so GTA regen does not fight bleed.
 - Falls, drowning, fire, and vehicle rams are read from `gameEventTriggered` / `CEventNetworkEntityDamage` on the client and reported as a claim. The server accepts them only inside the MTA bands in #144 (fall over 10 hp rolls a leg wound, ram uses server-side speed, explosion uses the server `explosionEvent` which can be cancelled). The client report is not the health delta; it is "this class of hit happened". The server computes the wound.
 
-The server writes health with `SetEntityHealth` from the wound total, on a 1 s tick, the same way MTA re-pushes stored HP. If the ped's health disagrees, the server value wins. Death is the server reaching 0, then `character_death_drop`, not the game's respawn. `respawnPlayerPedEvent` is cancelled; respawn is a new character row after the death UI.
+`SetEntityHealth` has no server RPC (checked 2026-11-06; `SetEntityCoords`, `SetPedArmour`, and `SetVehicleDoorsLocked` do). The server sends `characterHealthSynced(hp, armour)` to the owning client once a second and on every change, the same way MTA re-pushed stored HP. The owner writes `SetEntityHealth(ped, 100 + hp)` on the 100–200 band (`SetPedMaxHealth 200`) and the server writes armour through the `SetPedArmour` RPC. If the ped's health disagrees with the synced value, the client re-applies it; the server value wins (F166). GTA V also needs friendly fire on, no auto-reload, no auto-swap, no weapon drop on death, and no weapon switching; that belt is F162. Death is the server reaching 0, then `character_death_drop`, not the game's respawn. `respawnPlayerPedEvent` is cancelled; the owner cancels the wasted shard, runs the 30 s death camera and the death screen, and respawn is a new character row on `respawnRequested` (F165).
 
 `willKill` on `weaponDamageEvent` is a client prediction and is ignored. `hitComponent` is a hint for the body-part table (head 9.9, torso 1.0, groin 1.2, arms 0.9, legs 0.8) and is rejected when the server distance between shooter and victim is outside the MTA firearm formula's useful range. A hash that is not the weapon `items` has in the shooter's hand is a refused hit and an anticheat log, not a wound.
 
@@ -331,9 +333,9 @@ Routing buckets replace MTA dimensions. Docs compare them to virtual worlds and 
 
 ### Keys and UI
 
-`RegisterKeyMapping` for the five gameplay keys so players rebind in the GTA settings. That replaces MTA ADR 0012 (`bindKey` to a command). The commands are unrestricted and do no work beyond `TriggerServerEvent` of the existing request name. Hold actions (eat 3200 ms, heal, cuff 3000 ms as #158 specifies, craft times) are server timers. The client draws the hold in the NUI, or as a C# bar when the inventory page is closed. Releasing the key sends `treatmentCancelRequested` or the matching cancel. The server decides completion.
+`RegisterKeyMapping` for the gameplay keys so players rebind in the GTA settings: `interact` F, `dropitem` G, `putaway` Y, `inventory` H, `reloadweapon` R, `vehiclelock` L, `staffpanel` P, `unloadweapon` unbound. N is FiveM's push-to-talk and is not taken. That replaces MTA ADR 0012 (`bindKey` to a command). The commands are unrestricted and do no work beyond `TriggerServerEvent` of the existing request name. Hold thresholds, the F context priority, the GTA control collisions, and the per-state control belts are companion §5 and §6 (F064, F163). Hold actions (eat 3200 ms, heal, cuff 3000 ms as #158 specifies, craft times) are server timers. The client draws the hold in the NUI, or as a C# bar when the inventory page is closed. Releasing the key sends `treatmentCancelRequested` or the matching cancel. The server decides completion.
 
-Inventory is one NUI page in `hud`: the 6-slot grid, the worn-bag column, the open container, the gear slots, and the body preview. Short lists (a machine menu, a staff dialog, the body preview) are that same page, not ox_lib. The player list is a C# draw, not a second page. Always-on bars and the "F Cook" hint are C# draws so the browser is not focused in a fight. Toasts that must survive the inventory being closed are C# text, not a second page. Passwords are collected either on the connecting Adaptive Card (preferred, the player has no ped yet) or, for `/changepass` in play (#82), in the NUI. They are never entity state.
+Inventory is the `hud` Svelte page: the SA-MP list dialog (`[NN]Name` rows, nav rows, Options / Close), the body panel, and the six gear tiles with captions (no 3D previews; F116 is deferred). Short lists (a machine menu, a staff dialog, the keypad, the radio panel, the tweak pad) are that same page, not ox_lib. The chat box is the `chat` Svelte page. The player list is a C# draw, not a page. Always-on bars, the watch, the key-action list, and the "F Cook" hint are C# draws so the browser is not focused in a fight. Toasts are C# action text, not a page. Passwords are collected either on the connecting Adaptive Card (preferred, the player has no ped yet) or, for `/changepass` in play (#82), in the NUI. They are never entity state.
 
 ### Loot authoring
 
@@ -461,7 +463,7 @@ sv_endpointPrivacy true
 
 **F008, 2026-11-06.** `server.cfg` sets this block before the `ensure` lines. `sv_entityLockdown` is `strict`. Whether `strict` blocks a client-local `CreateObject` is still spike S1. The routing-bucket and client density layers landed in F009. `exec env.cfg` follows the block, so that file must not set `sv_maxclients` or it replaces 200. The gitignored `env.cfg` on this host does not.
 
-`sv_maxclients` above 64 requires `onesync on` (`https://docs.fivem.net/docs/server-manual/server-commands/#sv_maxclients-newvalue`). Above 48 slots, OneSync is not free. `ensure` order: `lib`, `data`, `logs`, `auth`, `character`, `items`, `crafting`, `apparel`, `weapons`, `vehicles`, `loot`, `building`, `world`, `hud`, `anticheat`, `staff`. If S3 keeps oxmysql, it is ensured first and is the node resource from upstream, not code we write. `dev` is not ensured in prod. Stock `chat` may be ensured. `spawnmanager` and `sessionmanager` must not fight `character` for the spawn; if they respawn the ped, they are stopped. `hardcap` from the 2023 tree is not used; `sv_maxclients` is the cap. No `ox_lib`.
+`sv_maxclients` above 64 requires `onesync on` (`https://docs.fivem.net/docs/server-manual/server-commands/#sv_maxclients-newvalue`). Above 48 slots, OneSync is not free. `ensure` order: `lib`, `data`, `logs`, `auth`, `character`, `items`, `crafting`, `apparel`, `weapons`, `vehicles`, `loot`, `building`, `world`, `hud`, `chat`, `anticheat`, `staff`. oxmysql is ensured first and is the node resource from upstream, not code we write. `dev` is not ensured in prod. The stock `chat` is ensured only until F169 lands the gamemode `chat` resource; then it leaves `server.cfg`. `spawnmanager` and `sessionmanager` are not present on this host (`system_resources` holds `chat` and `monitor` only), so `character` owns spawn, death, and respawn (F164, F165). `hardcap` from the 2023 tree is not used; `sv_maxclients` is the cap. No `ox_lib`.
 
 ### Load, failure, operations
 
@@ -515,7 +517,7 @@ Threats that matter: a modified client granting itself items or health, a second
 
 **How this is clustered.** One row is one issue the tracker step can file. A row is a bounded behaviour (often one MTA issue, or one FiveM replacement of a whole SA-specific pipeline), not a Pawn file and not a whole resource. Drop rows are included so the reason is on the tracker, which is what the MTA plan did with its "Dropped features" epic. Epics and milestones are not rows; the tracker PR creates them and parents these rows underneath.
 
-**Count: 158 rows (F001–F158).** That is inside the 120–160 band. Areas map to labels `area/*` and `port/*` using the MTA label names (`port/port`, `port/replace`, `port/drop`, `port/defer`). F151–F158 are the rows added for poses and the anticheat checks the first draft had mis-classified.
+**Count: 180 rows (F001–F180).** F001–F158 are inside the 120–160 band; F159–F180 are the client and UI rows added on 2026-11-06. Areas map to labels `area/*` and `port/*` using the MTA label names (`port/port`, `port/replace`, `port/drop`, `port/defer`). F151–F158 are the rows added for poses and the anticheat checks the first draft had mis-classified.
 
 MTA issue numbers are `VIRUXE/scavengesurvive-mta#N`. FiveM issues #1, #3, #4, #5 are called out as "joins".
 
@@ -722,6 +724,35 @@ MTA issue numbers are `VIRUXE/scavengesurvive-mta#N`. FiveM issues #1, #3, #4, #
 | F157 | staff | port | Frozen-player rollback: a player under freeze who moves more than 1 m is put back, at most one report per 10 s. | #100 | anticheat |
 | F158 | staff | port | Hacker-trap veto: `itemPickupAttempted` cancels, a `TRAP` report is filed, the player is banned. Do not import the 31 SA points in `data/traps.lua`. New points, if any, are authored on LS the same way as loot. The table shape stays. | #100 | anticheat |
 
+### Client and UI (F159–F180)
+
+Added 2026-11-06 (decision 25). The reference is `2026-11-06-scavengesurvive-fivem-client-ui-design.md`; the section numbers below are in that document. Milestones are where each row is needed, not a tenth milestone.
+
+| ID | Area | Class | Why on FiveM | Milestone | Resource |
+|---|---|---|---|---|---|
+| F159 | ui | replace | NUI pipeline: Svelte + Vite under `web/` of `hud` and `chat`, `tools/nui-build.sh <resource>` builds on the server then restarts, `ui_page` and `files` manifest shape, `RegisterNuiCallbackType` names and `SendNuiMessage` `type` values without prefixes, focus only while a dialog is open. `web/dist` gitignored. §11 | M1 | hud, chat |
+| F160 | hud | replace | C# draw kit, the port of the MTA `ui` dx kit: canvas scale and anchors, font map, action text, help tip, hold / knockout / overheat bars, skill notice, low-HP darkening, countdowns, key-action column. §2 | M1 | hud |
+| F161 | hud | replace | Stock GTA HUD policy: hide radar, cash, wanted, ammo counter, vehicle and street name, weapon wheel; keep health, armour, weapon icon, reticle, area name; hunger bar above health; ammo text from item data; car radio and phone off. §3 | M1 | hud |
+| F162 | character | replace | GTA defaults belt: friendly fire on, no auto-reload or auto-swap, no weapon drop on death, regen 0, no crits, wanted 0, dispatch off, no weapon switching, idle cam off, max health 200. §4 | M1 | character, weapons |
+| F163 | character | replace | Control belts per state (cuffed, hands up, knocked out, frozen, climbing, PC view) as `DisableControlAction` lists; crouch clipset for F036; the GTA animation table replacing every SA animation, including the F151 poses. §6 | M1 | character |
+| F164 | character | replace | First-spawn pipeline without `spawnmanager`: `characterSpawned` to the owner, model, collision wait, resurrect, loading-screen shutdown, fade, `characterSpawnFinished` back. Replaces the spike `Spawn.cs`, `Spawns.cs`, and their colon-named events. §7 | M1 | character |
+| F165 | character | replace | Death screen and camera: the owner cancels the wasted shard, 30 s rising camera, overlay with "YOU ARE DEAD!" and ">Play Again<" in the `hud` page, `respawnRequested`, resurrect on the next `characterSpawned`. §7 | M1 | character, hud |
+| F166 | character | replace | Health write path through the owning client, because `SetEntityHealth` has no server RPC: `characterHealthSynced(hp, armour)` at 1 Hz, 0–100 mapped onto 100–200, armour through the server RPC, client re-applies on disagreement. Corrects the Damage section. §7 | M1 | character, weapons |
+| F167 | character | replace | Screen and body effects: drunk and drug camera shake and timecycle, LSD and Heroin sky as a local override, infection shake, knockout ragdoll, bleeding particle, blood-pool decals. §8 | M1 | character |
+| F168 | ui | replace | Dialog kit in the `hud` Svelte page: SA-MP list dialog, message / input / password dialogs (`dialogOpened` → `dialogResponded`), info windows. Consumers: F023 language picker, F024 welcome box, F025 `/changepass`, the `/help` family. §12 | M1 | hud |
+| F169 | ui | replace | Custom `chat` resource with a Svelte chat box: modes local 40 m / global / radio / admin, the player chat commands, line formats and colours, flood mute, join lines, MoTD, Discord bridge. `chatMessageSent`, `chatMessageShown`. Replaces the stock `chat`; the name collision with the system resource is a live check (fallback `chatbox`). §13 | M1 | chat |
+| F170 | infra | drop | Remove the spike leftovers: `character/Client/Bunnyhop.cs`, `Spawn.cs`, `Shared/Spawns.cs`, `vehicles/Shared/ApocalypticModels.cs`, the staff teleport-to-marker and model-measure handlers, the time and weather setter events (all colon-named), and the vMenu `start` line in `env.cfg` (F146). `Presence.cs` stays under F135. | M1 | character, vehicles, staff |
+| F171 | items | replace | Attachments visible to others: player state bags `held`, `holster`, `bag`, `hat`, `mask`, `armour`, `cuffed`, `torch` as unames, every client attaches local objects to bones for peds in scope, two-handed carry clipset. Props for hat and mask stay with F115. §9 | M2 | items, apparel |
+| F172 | hud | replace | 3D label pass: item names 4 m with line of sight at 300 ms, defence hitpoints 10 m, sign text 25 m, supply crate and cache 20 m, carmour doors, staff nametags 300 m, voice icons, tweak arrow. F126 is this pass. §10 | M2 | hud |
+| F173 | ui | replace | Small dialogs in the `hud` page: keypad with hack mode and frontend sounds, radio panel, tweak pad, machine menu, note / sign / body / pot dialogs, recipes window, skills list. Consumers F035, F050, F053, F061, F076, F108, F111. §12 | M2 | hud |
+| F174 | world | replace | Particle and decal table: campfire and barbecue fire, machine smoke, flare trail, fireworks, welding and grinding sparks, bleeding spray, blood pools. Client-local, keyed by row id, stopped when the id leaves the projection. Replaces MTA `createEffect` and `fxAdd*`. §8 | M2 | world, items |
+| F175 | world | replace | Voice on Mumble: local 40 m always, global for everyone in global mode, radio as a channel per frequency, the staff channel only while `/a` is active, N push-to-talk, speaker icons and list, `voiceMuted`. §14 | M3 | chat |
+| F176 | world | replace | Interior IPL and entity-set list for the stock interiors that F070 places loot in, requested on the client when in range. | M3 | world |
+| F177 | vehicles | replace | Vehicle client half: the owner applies `engine`, `lights`, doors from the state bags, the server locks through the `SetVehicleDoorsLocked` RPC, the driver attaches trailers, `vehiclelock` key, vehicle panel and dashboard draws, GTA entry blocked for cars out of reach, carmour attach-mode draws. §15 | M5 | vehicles, hud |
+| F178 | staff | replace | Staff client half: the panel on P, grid lists and the ban / report / bug dialog chains in the `hud` page, spectate camera and banner, freeze, duty weather, staff nametags through F172. §16 | M7 | staff, hud |
+| F179 | staff | replace | Anticheat client: focus loss from the `hud` page visibility events as `anticheatFocusChanged`, `clientSampleReported(fps, ping, objects)` every 30 s, `clientErrorReported`, and the `sv_pureLevel` convar decision. §17 | M7 | anticheat, logs |
+| F180 | infra | defer | Custom asset streaming (`stream/`, `data_file`, runtime texture dictionaries for sprites such as the watch face and the voice icon) when custom props or icons arrive. Until then the draw kit uses rects and text. | M8 | — |
+
 ## API / interface changes
 
 MTA → FiveM is a new runtime, not a patch. The stable interface is the procedure row and the event names.
@@ -738,9 +769,9 @@ object fuel = Exports["vehicles"].getFuel(vehicleId); // the row cache, not GetV
 
 Neither returns an entity handle.
 
-**State bag keys** (server-written, replicated): `characterId` on the player, `hp`, `food`, `bleed` as numbers for the owner's HUD and for staff spectate; `vehicleId`, `fuel`, `locked` on vehicles; `defenceId`, `hitpoints` on placed defences. Bags are not a channel for inventories.
+**State bag keys** (server-written, replicated): `characterId` on the player, `hp`, `food`, `bleed` as numbers for the owner's HUD and for staff spectate, plus the attachment and state keys `held`, `holster`, `bag`, `hat`, `mask`, `armour`, `cuffed`, `torch`, `ammo`, `knockedOut`, `bleeding`, `duty`, `lang` (unames and flags, companion §9); `vehicleId`, `type`, `fuel`, `locked`, `engine`, `lights`, `battery`, `bay`, `loose`, `carmour`, `doorHp`, `gasBottles`, `cargo`, `containerId` on vehicles (companion §15); `defenceId`, `hitpoints` on placed defences. Bags are not a channel for inventories.
 
-**NUI.** One `ui_page`, the inventory. `hud` sends `SendNuiMessage` for inventory open, sync, and close. Callbacks use `RegisterNuiCallback` and then the same server events (`itemContainerMoveRequested`, …). The player list (F123) is a C# draw, not a second page. The NUI never calls MariaDB. The NUI never learns another player's identifier.
+**NUI.** Two Svelte pages, `hud` (dialogs) and `chat` (chat box), built on the server (F159). `hud` sends `SendNuiMessage` JSON `{ type, ... }` with `type` in the `<subject><PastTenseVerb>` form (`inventoryOpened`, `dialogOpened`). Callbacks are registered with `RegisterNuiCallbackType` under names of the same form (`dialogResponded`, `inventorySlotMoved`) and then trigger the same server events (`itemContainerMoveRequested`, …). Focus is taken only while a dialog is open. The player list (F123) is a C# draw, not a page. The NUI never calls MariaDB. The NUI never learns another player's identifier.
 
 **Deferral card.** Login and register finish with `deferrals.done()` or `deferrals.done(reason)`. A banned or whitelist-failed connect never reaches `playerJoining`.
 
@@ -842,9 +873,9 @@ Order is M0 through M8 below. Do not start M2 until the F011 statement probe is 
 | Milestone | Deliverables | Exit criteria |
 |---|---|---|
 | M0 Bootstrap and data | F001–F014. C# resources start and stop clean. Schema loaded. Catalogues loaded. Spikes S1, S2, and S4–S6 written up. S3 is cancelled (decision 22). Population belt visible as an empty street. | A server with an empty database boots, the F011 `devprobe` statement returns one flat row, no ambient peds in south LS, build reported as 3570. |
-| M1 Auth and character | F015–F040 and F151 (poses). Card login, bans, one character, food and bleed ticks, death, tutorial bucket, C# HUD bars. | Two clients register, spawn in south LS, starve, die, and come back as a new character. Hands up blocks item use once items exist. Stats survive a resource restart. A banned license never gets a ped. Joins #1 and #3. |
-| M2 Items | F041–F064. Projection, pickup, inventory NUI, bags, use, cooking. | Two clients pick up the same item; exactly one procedure wins. Restarting `items` leaves rows in place and rebuilds local objects. A client event with someone else's item id is refused. |
-| M3 Loot and world | F065–F073, F075–F077, F080 as a recorded drop. South-LS points, budget, weather, clock, zones. Not F074. | The first district has loot, the allowance does not bank, weather changes without a client setting it, join does not spawn traffic. |
+| M1 Auth and character | F015–F040, F151 (poses), and the client rows F159–F170: NUI pipeline, C# draw kit, HUD policy, GTA defaults belt, control belts, spawn without `spawnmanager`, death screen, health write path, effects, dialog kit, custom chat, spike cleanup. Card login, bans, one character, food and bleed ticks, death, tutorial bucket. | Two clients register, spawn in south LS without `spawnmanager`, see the C# HUD and the chat join lines, starve, see the screen darken, die to the death screen, and come back as a new character. Hands up blocks item use once items exist. Stats survive a resource restart. A banned license never gets a ped. Joins #1 and #3. |
+| M2 Items | F041–F064 and F171–F174. Projection, pickup, inventory page, bags, use, cooking, attachments, labels, small dialogs, particles. | Two clients pick up the same item; exactly one procedure wins. The second client sees the held item in the first client's hand and the item label on the ground. Restarting `items` leaves rows in place and rebuilds local objects. A client event with someone else's item id is refused. |
+| M3 Loot and world | F065–F073, F075–F077, F080 as a recorded drop, F175 voice, F176 interiors. South-LS points, budget, weather, clock, zones. Not F074. | The first district has loot, the allowance does not bank, weather changes without a client setting it, join does not spawn traffic, voice is heard at 40 m locally and across the map in global mode. |
 | M4 Weapons | F081–F094. | A hit applies a wound and does not move native health first (S2). Armour breaks. A disconnect inside the combat window drops the items. Handcuffs take 3 s. |
 | M5 Vehicles | F095–F102, F104–F106. | A vehicle persists, locks, has a trunk that is a container, stalls when the litre hits 0, and counts against the vehicle cap. |
 | M6 Craft, build, apparel | F074 and F107–F117. | A keypad base can be built and cannot be crowbarred from outside. Explosives (F074) damage it. Freemode hat shows while the hat row is worn and disappears when it drops. |
@@ -888,6 +919,7 @@ The spikes below are measurements the first implementation week writes into `doc
 | S4 | With `onesync_population false` on this server build, what is the networked object id width, and do parked vehicles still appear (`citizenfx/fivem#2751`, `#3623`)? | Record the number. Population absent with all three layers. | Keep loot off the entity path regardless. Tighten the `entityCreating` filter. |
 | S5 | bcrypt routine produces a 60-character `$2a$` or `$2b$` hash at cost 10 that verifies. Passed on F017 (2026-11-06): new hashes are `$2b$10$`, 60 characters, and a wrong password does not verify. | Fits `accounts.password_hash`. | Swap the routine before any account is created. Column width stays. |
 | S6 | Type round trip on the F011 `MySql.Single` path: NULL, a DECIMAL fuel value, a FLOAT coordinate near `4000.5`, a `POINT` read back via `ST_X`/`ST_Y`. | Coordinate error under 1 cm. NULL is null, not a false-like zero. | Record the CLR types on `dev.probed`. Do not `SELECT pos`. Do not add `Db.Call`. |
+| S7 | Key-name display for a `RegisterKeyMapping` command on build 3570: does the `~INPUT_<hash>~` text tag resolve to the player's current binding? Added 2026-11-06 for the key-action column (F160). | The column shows the rebound key within a second of the change. | Show the default key letter and keep the column; record the limitation in the companion spec. |
 
 ## References
 
@@ -972,21 +1004,21 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 - **Title:** feat(auth): identifiers, bcrypt, bans, whitelist
 - **Files:** `auth/**`, procedures touched by F019 and F021
 - **Depends on:** PR 4, PR 5
-- **Description:** Deferral card, the identifier set, license auto-resume, bans, whitelist, connection log, language, MoTD, `/changepass`. Live check: two clients, one banned license, one whitelist kick. Commit the rebuilt root DLLs. F015–F026. Leaves #1 and #3 open.
+- **Description:** Deferral card, the identifier set, license auto-resume, bans, whitelist, connection log, language, MoTD, `/changepass`. The custom `chat` resource (F169) lands here so the join lines and MoTD have a box. Live check: two clients, one banned license, one whitelist kick. Commit the rebuilt root DLLs. F015–F026, F169. Leaves #1 and #3 open.
 
 ### PR 8 — Character and HUD bars
 
 - **Title:** feat(character): spawn, ticks, death, freemode appearance
 - **Files:** `character/**`, `hud/**` (bars and keys only), `apparel/**` (apply appearance only)
 - **Depends on:** PR 7
-- **Description:** One alive character, south-LS spawns, food and bleed, wound count rebuilt from bleed (not a persisted array), infection and drugs, knockout, skills, travel stats as shipped (F036), poses (F151), death drop stub (items land when PR 9 exists), tutorial bucket, save-block. C# bars, not ox_lib. Commit the rebuilt root DLLs. F027–F040, F064, F151, F117's column. Leaves #3 and #5 open.
+- **Description:** One alive character, south-LS spawns, food and bleed, wound count rebuilt from bleed (not a persisted array), infection and drugs, knockout, skills, travel stats as shipped (F036), poses (F151), death drop stub (items land when PR 9 exists), tutorial bucket, save-block. The client rows: NUI pipeline (F159), C# draw kit (F160), HUD policy (F161), GTA defaults belt (F162), control belts and animations (F163), spawn pipeline (F164), death screen (F165), health write path (F166), effects (F167), dialog kit (F168), spike cleanup (F170). C# bars, not ox_lib. Commit the rebuilt root DLLs. F027–F040, F064, F151, F159–F168, F170, F117's column. Leaves #3 and #5 open.
 
 ### PR 9 — Items, projection, inventory
 
 - **Title:** feat(items): item graph, projection, inventory NUI
 - **Files:** `items/**`, `hud` NUI, procedures whose signatures changed
 - **Depends on:** PR 8, and the F011 statement probe recorded
-- **Description:** Pickup, drop, give, bags, containers, projection, ground-Z clamp, disallow rules, animations. Live check: two clients race one item. Commit the rebuilt root DLLs. F041–F048, F063.
+- **Description:** Pickup, drop, give, bags, containers, projection, ground-Z clamp, disallow rules, animations, attachments visible to others (F171), the 3D label pass (F172), small dialogs (F173), particles (F174). Live check: two clients race one item; the second client sees the first's held item. Commit the rebuilt root DLLs. F041–F048, F063, F171–F174.
 
 ### PR 10 — Item behaviours that do not need the map
 
@@ -1000,7 +1032,7 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 - **Title:** feat(loot): budget, survey tool, south Los Santos points
 - **Files:** `loot/**`, `world` zones, `dev` survey command, `sql` seed for the new points
 - **Depends on:** PR 9, PR 6
-- **Description:** ADR 0001 including allowance expiry. Authored points, not the SA seeds (`0002`, `0004`, `0005`, `0006`, `0007`). Commit the rebuilt root DLLs. F065–F071, F075–F077. F074 is not in this PR. F141 records the five seeds as not loaded.
+- **Description:** ADR 0001 including allowance expiry. Authored points, not the SA seeds (`0002`, `0004`, `0005`, `0006`, `0007`). Voice (F175) and the interior IPL list (F176). Commit the rebuilt root DLLs. F065–F071, F075–F077, F175, F176. F074 is not in this PR. F141 records the five seeds as not loaded.
 
 ### PR 12 — Weapons and damage
 
@@ -1014,7 +1046,7 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 - **Title:** feat(vehicles): server vehicles, fuel, locks, trunks, scarcity
 - **Files:** `vehicles/**`, `items` trunk wiring
 - **Depends on:** PR 9, PR 11 (budget module)
-- **Description:** F095–F102, F104–F106. Native fuel consumption remains off. F103 is not in this PR. Commit the rebuilt root DLLs.
+- **Description:** F095–F102, F104–F106, and the vehicle client half (F177). Native fuel consumption remains off. F103 is not in this PR. Commit the rebuilt root DLLs.
 
 ### PR 14 — Crafting, building, apparel
 
@@ -1028,7 +1060,7 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 - **Title:** feat(staff): tiers, reports, bans in play, anticheat
 - **Files:** `staff/**`, `anticheat/**`, `hud` player list and nametags
 - **Depends on:** PR 8, and ideally PR 12 for spectate during damage
-- **Description:** F119–F126 and F152–F158. Command parity against the MTA staff list. Level failures are logged. Jetpack and swim-fly are ported, not dropped. The player list is a C# draw (F123), not a second NUI page. Commit the rebuilt root DLLs.
+- **Description:** F119–F126, F152–F158, the staff client half (F178), and the anticheat client (F179). Command parity against the MTA staff list. Level failures are logged. Jetpack and swim-fly are ported, not dropped. The player list is a C# draw (F123), not a page. Commit the rebuilt root DLLs.
 
 ### PR 16 — Content and recorded drops
 

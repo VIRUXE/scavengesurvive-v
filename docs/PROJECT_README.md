@@ -24,6 +24,6 @@ Size labels exist so a later pass can mark XS–XL. This filing does not guess a
 
 ## Epics
 
-One epic per milestone, plus a Dropped epic for F134–F150. F151 is under M1. F152–F158 are under M7. Issues #1, #3, #4, and #5 stay open and are labelled onto auth, character, and building.
+One epic per milestone, plus a Dropped epic for F134–F150. F151 is under M1. F152–F158 are under M7. F159–F170 (client and UI, 2026-11-06) are under M1, F171–F174 under M2, F175–F176 under M3, F177 under M5, F178–F179 under M7, F180 under M8. Issues #1, #3, #4, and #5 stay open and are labelled onto auth, character, and building.
 
 Milestones, labels, and the epics are the tracker. Wiki and GitHub Pages stay off. The session process is `docs/process.md`.
