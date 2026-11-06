@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="*.cs" />
     <Compile Include="..\Shared\**\*.cs" />
+<Compile Include="..\..\lib\Server\MySql.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

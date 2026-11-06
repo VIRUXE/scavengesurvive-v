@@ -57,7 +57,7 @@ namespace Server
                 int ped = API.GetPlayerPed(source);
                 Vector3 coords = API.GetEntityCoords(ped);
                 string json = string.Format(CultureInfo.InvariantCulture, "{{\"x\":{0},\"y\":{1},\"z\":{2}}}", coords.X, coords.Y, coords.Z);
-                Exports["oxmysql"].update(
+                MySql.Update(
                     "UPDATE accounts SET last_position = ? WHERE id = ?",
                     new object[] { json, session.AccountId },
                     new Action<dynamic>(unused => { }));
@@ -108,7 +108,7 @@ namespace Server
 
         void Login(dynamic deferrals, string source, string username, string password)
         {
-            Exports["oxmysql"].single(
+            MySql.Single(
                 "SELECT id, username, email, last_position FROM accounts WHERE username = ?",
                 new object[] { username },
                 new Action<dynamic>(row =>
@@ -119,8 +119,8 @@ namespace Server
                         return;
                     }
 
-                    int id = Convert.ToInt32(Field(row, "id"));
-                    Exports["oxmysql"].scalar(
+                    int id = MySql.Int(row, "id");
+                    MySql.Scalar(
                         "SELECT IF(SHA2(?, 256) = password, 1, 0) FROM accounts WHERE id = ?",
                         new object[] { password, id },
                         new Action<dynamic>(match =>
@@ -131,14 +131,14 @@ namespace Server
                                 return;
                             }
 
-                            Accept(deferrals, source, id, Convert.ToString(Field(row, "username")), Convert.ToString(Field(row, "email")), Convert.ToString(Field(row, "last_position")));
+                            Accept(deferrals, source, id, MySql.Text(row, "username"), MySql.Text(row, "email"), MySql.Text(row, "last_position"));
                         }));
                 }));
         }
 
         void BeginRegister(dynamic deferrals, string source, string username, string password)
         {
-            Exports["oxmysql"].scalar(
+            MySql.Scalar(
                 "SELECT id FROM accounts WHERE username = ?",
                 new object[] { username },
                 new Action<dynamic>(existing =>
@@ -164,7 +164,7 @@ namespace Server
                             return;
                         }
 
-                        Exports["oxmysql"].insert(
+                        MySql.Insert(
                             "INSERT INTO accounts (username, password, email) VALUES (?, SHA2(?, 256), ?)",
                             new object[] { username, password, email },
                             new Action<dynamic>(accountId =>
@@ -237,7 +237,7 @@ namespace Server
 
             foreach (KeyValuePair<string, string> identifier in session.Identifiers)
             {
-                Exports["oxmysql"].update(
+                MySql.Update(
                     "INSERT INTO account_identifiers (account_id, type, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1",
                     new object[] { id, identifier.Key, identifier.Value },
                     new Action<dynamic>(unused => { }));
@@ -245,20 +245,13 @@ namespace Server
 
             for (int i = 0; i < session.Tokens.Length; i++)
             {
-                Exports["oxmysql"].update(
+                MySql.Update(
                     "INSERT INTO account_tokens (account_id, token) VALUES (?, ?) ON DUPLICATE KEY UPDATE last_used = NOW(), times_used = times_used + 1",
                     new object[] { id, session.Tokens[i] },
                     new Action<dynamic>(unused => { }));
             }
 
             deferrals.done();
-        }
-
-        static object Field(dynamic row, string key)
-        {
-            IDictionary<string, object> dict = row as IDictionary<string, object>;
-            if (dict != null && dict.ContainsKey(key)) return dict[key];
-            return row[key];
         }
 
         static string Card(string message, string username, string password)

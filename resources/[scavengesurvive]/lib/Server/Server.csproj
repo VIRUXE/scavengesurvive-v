@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.cs" />
+    <Compile Include="MySql.cs" />
     <Compile Include="..\Shared\**\*.cs" />
   </ItemGroup>
   <ItemGroup>
