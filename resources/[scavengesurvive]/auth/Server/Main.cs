@@ -21,9 +21,10 @@ namespace Server
             API.RegisterCommand("authrecord", new Action<int, List<object>, string>(OnRecord), true);
             API.RegisterCommand("authpass", new Action<int, List<object>, string>(OnPass), true);
             API.RegisterCommand("authresume", new Action<int, List<object>, string>(OnResumeProbe), true);
+            API.RegisterCommand("authban", new Action<int, List<object>, string>(OnBanProbe), true);
             Exports.Add("getAccountId", new Func<string, object>(GetAccountId));
             Exports.Add("getAdminLevel", new Func<string, object>(GetAdminLevel));
-            Debug.WriteLine("auth server started. license auto-resume, then the card.");
+            Debug.WriteLine("auth server started. bans, then license auto-resume, then the card.");
         }
 
         async Task Pump()
@@ -77,7 +78,7 @@ namespace Server
                 Note("session.connected", ConnectedFields(session));
                 deferrals.update("Checking your account status...");
                 await Delay(0);
-                TryResume(deferrals, source);
+                CheckBan(deferrals, source);
             }
             catch (Exception ex)
             {
@@ -229,6 +230,40 @@ namespace Server
             }
 
             Debug.WriteLine("[auth] authresume " + line);
+        }
+
+        async void OnBanProbe(int source, List<object> args, string raw)
+        {
+            string line = null;
+            try
+            {
+                Bans.Probe(result => line = result);
+                for (int i = 0; i < 120 && line == null; i++)
+                    await Delay(100);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] authban failed: " + ex.GetType().Name);
+                return;
+            }
+
+            if (line == null)
+            {
+                Debug.WriteLine("[auth] authban failed step=timeout");
+                MySql.Update(
+                    "DELETE FROM staff_actions WHERE target_name IN ('f019a', 'f019b')",
+                    new object[0],
+                    new Action<dynamic>(unused =>
+                    {
+                        MySql.Update(
+                            "DELETE FROM bans WHERE name IN ('f019a', 'f019b')",
+                            new object[0],
+                            new Action<dynamic>(unused2 => { }));
+                    }));
+                return;
+            }
+
+            Debug.WriteLine("[auth] authban " + line);
         }
 
         static Dictionary<string, object> ConnectedFields(Session session)
@@ -432,6 +467,68 @@ namespace Server
             if (code == "NO_ACCOUNT")
                 return "Account not found.";
             return "Account load failed";
+        }
+
+        void CheckBan(dynamic deferrals, string source)
+        {
+            Session session = Sessions.Get(source);
+            if (session == null)
+            {
+                Close(deferrals, source, "Connection closed.");
+                return;
+            }
+
+            Bans.Match(session.Identifiers, session.Tokens, hit => OnBan(deferrals, source, hit));
+        }
+
+        void OnBan(dynamic deferrals, string source, BanHit hit)
+        {
+            Session session = Sessions.Get(source);
+            if (session == null)
+            {
+                try
+                {
+                    deferrals.done("Connection closed.");
+                }
+                catch (Exception)
+                {
+                }
+
+                return;
+            }
+
+            string code = hit == null ? "DB_ERROR" : hit.Code;
+            if (code == "DB_ERROR")
+            {
+                var fields = new Dictionary<string, object>();
+                fields["player"] = source;
+                fields["ok"] = false;
+                fields["code"] = "DB_ERROR";
+                fields["reason"] = "banLookupFailed";
+                Note("session.kicked", fields);
+                Close(deferrals, source, "Account load failed");
+                return;
+            }
+
+            if (hit != null && hit.Banned)
+            {
+                var fields = ConnectedFields(session);
+                fields["ok"] = false;
+                fields["code"] = "BANNED";
+                fields["ban_id"] = hit.BanId;
+                fields["ban_reason"] = hit.Reason ?? "";
+                fields["by_name"] = hit.ByName ?? "Server";
+                fields["matched_type"] = hit.MatchedType ?? "";
+                fields["created"] = hit.Created ?? "";
+                fields["expires"] = string.IsNullOrEmpty(hit.Expires) ? "Never" : hit.Expires;
+                if (hit.AccountId > 0)
+                    fields["account_id"] = hit.AccountId;
+                Note("session.banned", fields);
+                Close(deferrals, source, Bans.Message(hit));
+                return;
+            }
+
+            TryResume(deferrals, source);
         }
 
         void TryResume(dynamic deferrals, string source)
