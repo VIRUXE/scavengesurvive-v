@@ -1,5 +1,7 @@
 # Scavenge and Survive V
 
-A sort of port of _Scavenge and Survive_, from _SA-MP_.
+A port of [Scavenge & Survive](https://scavengesurvive.com) onto FiveM, on the Los Santos map. Gameplay resources are C#. Behaviour comes from the MTA port.
 
-Read more at <https://scavengesurvive.com>
+The tracker is the [issues](https://github.com/VIRUXE/scavengesurvive-v/issues) on this repo. The behaviour spec is `docs/superpowers/specs/2026-11-06-scavengesurvive-fivem-port-design.md`. The way of working is `docs/process.md`.
+
+New code is [Unlicense](LICENSE). Secrets stay in gitignored `env.cfg`.

@@ -1,6 +1,6 @@
 # Scavenge & Survive → FiveM — tracker
 
-Tracks the port on private `VIRUXE/scavengesurvive-v`. Gameplay resources are C#. Behaviour comes from the MTA port.
+Tracks the port on public `VIRUXE/scavengesurvive-v`. Gameplay resources are C#. Behaviour comes from the MTA port. The way of working is `docs/process.md`.
 
 The gamemode resources are C# and live in `resources/[scavengesurvive]/`. They are started from `resources.cfg`. The project Lua (`player`, `game`, `vehicle`, `admin`, and the Lua `world`) has been removed after its behaviour was moved into `auth`, `character`, `data`, `staff`, `vehicles`, and `world`. Vendor resources (`oxmysql`, `ox_lib`, `[maps]`, vMenu) stay. The Discord bot stays the node resource.
 
@@ -24,4 +24,4 @@ Size labels exist so a later pass can mark XS–XL. This filing does not guess a
 
 One epic per milestone, plus a Dropped epic for F134–F150. F151 is under M1. F152–F158 are under M7. Issues #1, #3, #4, and #5 stay open and are labelled onto auth, character, and building.
 
-A GitHub Project board is not required. Milestones, labels, and the epics are the tracker. If a Project is created later, group the board by milestone. The API cannot set a view's group-by.
+Milestones, labels, and the epics are the tracker. Wiki and GitHub Pages stay off. The session process is `docs/process.md`.

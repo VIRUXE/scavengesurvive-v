@@ -5,7 +5,7 @@
 | Author | VIRUXE |
 | Date | 2026-11-06 |
 | Status | Draft |
-| Tracker | private `VIRUXE/scavengesurvive-v` |
+| Tracker | public `VIRUXE/scavengesurvive-v` |
 | Behaviour baseline | finished MTA port `VIRUXE/scavengesurvive-mta` (not a fresh reading of the SA-MP Pawn) |
 | Engine | FiveM **Legacy**, Mono C# on **.NET Framework 4.5.2**, OneSync, game build **3570** (`mp2025_01`, Money Fronts). Not Enhanced (.NET 10). |
 
@@ -13,7 +13,7 @@ This is an architecture and port plan. It does not contain gameplay code. A late
 
 ## Overview
 
-Scavenge & Survive is a PvP survival gamemode: physical items, a wound-and-bleed damage model, permadeath, a scarce loot economy, bases, and vehicles with fuel, locks, and trunks. The finished implementation of that behaviour is the MTA port (`resources/[scavengesurvive]/` under `scavengesurvive-mta`), backed by MariaDB stored procedures that return one row `ok, code, payload`. This document plans the same behaviour on FiveM, on the Los Santos map, in the private repository `VIRUXE/scavengesurvive-v`.
+Scavenge & Survive is a PvP survival gamemode: physical items, a wound-and-bleed damage model, permadeath, a scarce loot economy, bases, and vehicles with fuel, locks, and trunks. The finished implementation of that behaviour is the MTA port (`resources/[scavengesurvive]/` under `scavengesurvive-mta`), backed by MariaDB stored procedures that return one row `ok, code, payload`. This document plans the same behaviour on FiveM, on the Los Santos map, in the public repository `VIRUXE/scavengesurvive-v`.
 
 The world changes. Item names, sizes, recipes, loot weights, wound numbers, and the MariaDB item graph transfer. San Andreas coordinates, SA object ids, SA skins, hat DFFs, and the 11,066 SA loot points do not. Loot positions are authored on the GTA V map. Identity is the 2025 FiveM set (`license`, `license2`, `discord`, `fivem`, `steam`, `xbl`, `live`, `ip`, and tokens), which is what issues #1 and #3 already asked for, plus `license2`, `steam`, and tokens. UI is a NUI page plus C# draws. Damage stays server-authoritative. Population stays off. Appearance is freemode components and props.
 
@@ -81,7 +81,7 @@ These are the approved constraints, recorded so a later issue does not reopen th
 
 1. **Behaviour source is the finished MTA port.** Where an MTA issue records a decision, cite `VIRUXE/scavengesurvive-mta#N`. Do not re-read the Pawn to invent a second behaviour. Open bugs whose bodies still match missing code (#154, #155, #156, #158) are ported as those issues describe the gap. #67, #134, #138, and #147 are open in the tracker and shipped in the tree. Port the code, and treat the issue body as a tracker miss. #147's recipe list is `crafting/shared/logic/craft.lua`, not the issue text.
 2. **World is Los Santos, not San Andreas.** Names, sizes, recipes, loot weights, wound numbers, and the item graph transfer. Coordinates, object ids, skins, hat DFFs, and the 11,066 loot points do not. New points are authored on the GTA V map.
-3. **Tracker stays private** `VIRUXE/scavengesurvive-v` (moved 2026-11-06 off the 2023 repo). Do not propose making it public. The C# projects live in `resources/[scavengesurvive]/`. The resource name `world` is that C# project. The old Lua world folder is `spike-lua/world` and is not scanned. `player` and `vehicle` are spike Lua names and are not gamemode resources.
+3. **The tracker is public** `VIRUXE/scavengesurvive-v` (moved 2026-11-06 off the 2023 repo, and made public the same day by the owner). That reverses the earlier "keep it private" rule. Issues, milestones, labels, and commits are the tracker. Docs stay in the repo. No wiki and no GitHub Pages. Secret scanning and push protection are on. The way of working is `docs/process.md`. The C# projects live in `resources/[scavengesurvive]/`. The resource name `world` is that C# project. The old Lua world folder is `spike-lua/world` and is not scanned. `player` and `vehicle` are spike Lua names and are not gamemode resources.
 4. **Many resources, no prefix, MariaDB is the only shared state.** Domains: `lib`, `data`, `auth`, `character`, `items`, `crafting`, `apparel`, `weapons`, `vehicles`, `loot`, `building`, `world`, `hud`, `staff`. Infrastructure beside those: `logs`, `anticheat`, `dev`. No `maps` resource (the map is the game). No `ui` resource (`hud` owns the NUI page). No `explosives` resource: the shipped MTA `explosives` resource's behaviour lands in `world`. OneSync server entities. State bags for small replicated per-entity facts. Atomicity is one stored-procedure `CALL`, not a multi-statement transaction in C#.
 5. **Every gamemode resource is C#** (user decision 2026-11-06). This overrides the earlier Lua 5.4 choice. Each resource is a solution in the shape of `VIRUXE/cfx-csharp-boilerplate`: a Client class library (`client.net.dll`), a Server class library (`server.net.dll`), and `Shared/**/*.cs` compiled into both. `fxmanifest.lua` stays because FiveM requires it, and it only declares the assemblies. The Mono runtime's target is **.NET Framework 4.5.2**. The boilerplate README says that framework is "at this time", the csproj sets `TargetFrameworkVersion` `v4.5.2`, and `CitizenFX.Core.Client` 1.0.7537 / `CitizenFX.Core.Server` 1.0.7538 resolve `lib/net45`. The current runtime page (`https://docs.fivem.net/docs/scripting-manual/runtimes/csharp/`) still describes that Mono workflow and says the template builds "the correct .NET Framework". It does not name a newer Mono TFM. FiveM for GTA V Enhanced replaces Mono with .NET 10; Enhanced is already out of scope (decision 16). The boilerplate TFM is not stale for Legacy. FXServer loads prebuilt DLLs (`client_script 'client.net.dll'`, and the first-script guide says the built DLL has to be in the resource folder). It does not run MSBuild. Both Debug and Release set `OutputPath` to the resource root (`..\`), the same place the manifest loads. The boilerplate's Release path `bin\Release\` is not used. Commit `client.net.dll` and `server.net.dll` beside `fxmanifest.lua` in every PR that changes a `.cs` file. Gitignore `bin/`, `obj/`, and NuGet `packages/`. Those directories are not the artifact.
 6. **Auth is the FiveM identifier set**, not MTA serials: `license`, `license2`, `discord`, `fivem`, `steam`, `xbl`, `live`, `ip`, and tokens. bcrypt cost 10, `char(60)` hashes. No Whirlpool import. No email account (the spike's `accounts.email` is dropped).
@@ -100,6 +100,7 @@ These are the approved constraints, recorded so a later issue does not reopen th
 19. **License auto-resume replaces IP auto-login.** If a `license` is bound to exactly one account and `auth.license_autologin` is on (default on), the deferral resumes that account. A new license always requires the password. This is not MTA #86 (auto-login by IP), which is not ported.
 20. **First authored district is south Los Santos.** Shipped zone ids, all ≤ 16 characters: `DAVIS`, `STRAWBERRY`, `CHAMBERLAIN`, `RANCHO`, `LAMESA`, `CYPRESS`, `BURRO`, `PORT`, `ELYSIAN`, `LSIA`. Strawberry and Chamberlain Hills are their own ids, not folded into a neighbour. Blaine County and the north are M8 content. The economy does not wait on 11,066 points.
 21. **`zone` widens from `varchar(8)` to `varchar(16)` on every zone column**, not only `loot_spawns` and `world_budget`. That is also `items.loot_zone`, `supply_drop_points.zone`, and `weapon_cache_points.zone`, plus `item_create`'s `DECLARE v_zone VARCHAR(8)`. `GRAPESEED` is 9, `STRAWBERRY` is 10, `CHAMBERLAIN` is 11. SA zone codes (`LS`, `SF`, `BC`, …) are not reused.
+22. **SQL goes through oxmysql. There is no `Db.Call`.** Owner decision 2026-11-06. Gameplay resources call `Exports["oxmysql"]` (`query`, `single`, `scalar`, `update`, `insert`, `rawExecute`) with placeholders. No C# MySQL driver. No `lib` procedure wrapper. No `CALL` gate. `auth` already calls oxmysql this way. The MTA procedures stay the behaviour to reimplement as statements. Spike S3 is cancelled. Where an older paragraph still says `Db.Call` is the only path, this decision wins.
 
 ## Proposed Design
 
@@ -131,7 +132,7 @@ client_script 'client.net.dll'
 server_script 'server.net.dll'
 ```
 
-`hud` also declares `ui_page` and `files` for the one inventory NUI. No second `ui_page`. No `lua54`. No `shared_script` of Lua. Pure types that do not open a socket live in `Shared/**/*.cs` and are compiled into both assemblies (`<Compile Include="../Shared/**/*.cs" />`). `Db.Call`, the connection string, and any MySQL driver reference live only under `lib/Server` and are not in that glob. Client classes inherit `BaseScript`. Server classes inherit `ServerScript`, as the boilerplate's `Server/Main.cs` does. Both configurations set `<OutputPath>..\</OutputPath>` so `client.net.dll` and `server.net.dll` land next to `fxmanifest.lua`. Release does not write `bin\Release\`.
+`hud` also declares `ui_page` and `files` for the one inventory NUI. No second `ui_page`. No `lua54`. No `shared_script` of Lua. Pure types that do not open a socket live in `Shared/**/*.cs` and are compiled into both assemblies (`<Compile Include="../Shared/**/*.cs" />`). No MySQL driver lives in any gamemode assembly. SQL is an oxmysql export call from the server script that needs it (decision 22). Client classes inherit `BaseScript`. Server classes inherit `ServerScript`, as the boilerplate's `Server/Main.cs` does. Both configurations set `<OutputPath>..\</OutputPath>` so `client.net.dll` and `server.net.dll` land next to `fxmanifest.lua`. Release does not write `bin\Release\`.
 
 Cross-resource contract, same as MTA `CLAUDE.md`: pass numeric ids, never entity handles. The manifest docs show the call shape (`https://docs.fivem.net/docs/scripting-reference/resource-manifest/`, Consuming an export, C#):
 
@@ -163,7 +164,7 @@ Start order is `server.cfg` `ensure` lines, which is also dependency order. `fxm
 
 | Resource | Side | Owns | Key exports / events |
 |---|---|---|---|
-| `lib` | shared C# plus a server-only assembly | `Shared`: rate limit, one-shot token, log field shape, vectors. No socket. `lib/Server` only: `Db.Call`, the driver reference, the connection string. The client csproj does not compile `Db.Call` and does not reference MySqlConnector or call `Exports["oxmysql"]`. | `Db.Call` is the only gameplay path to `CALL`, and only the server calls it. |
+| `lib` | shared C# plus a server-only assembly | `Shared`: rate limit, one-shot token, log field shape, vectors. No socket. No MySQL driver. SQL is not in `lib`. Each server resource calls oxmysql itself. | oxmysql `query`, `single`, `scalar`, `update`, `insert`, `rawExecute`. |
 | `data` | shared C# | Catalogues compiled in from the MTA generated files, as C# types or embedded resources. Item types (names, sizes, categories, calibres, recipes), loot tables, both language families, vehicle class rows. SA `model` and `baseWeapon` are not runtime fields. `Prop` and `Weapon` are `uint` joaats. Unmapped prop is the crate fallback, not model `331`. | `GetItemType`, `GetLootTable`, `GetRecipe`, `Lang.ItemType`, `Lang.Text`, `Lang.TextFor`. |
 | `auth` | server + client NUI/card | Accounts, bcrypt, identifier and token binding, bans, whitelist, connection log, admin level, language. Deferral Adaptive Card during `playerConnecting`. | `getAccountId`, `getCharacterId` is **not** here, `getAdminLevel`. Emits `playerAuthenticated`, `playerLoggedOut`. Handles `loginRequested`, `registrationRequested`. |
 | `character` | server + client | Character row, appearance JSON, survival tick (food, bleed, infection, drugs, knockout), skills, travel stats, spawn, death, save-block, combat-log clock. | `getCharacterId`, `isHandsUp`, `isKnockedOut`. Emits `characterSpawned`, `characterDied`, `characterStatsSynced`. |
@@ -181,7 +182,7 @@ Start order is `server.cfg` `ensure` lines, which is also dependency order. `fxm
 | `logs` | server | `log.event(kind, fields, level)` to stdout JSON. Optional Loki push, same kind names as MTA (`domain.pastTenseVerb`). The only resource that may `PerformHttpRequest`. | `event`. |
 | `dev` | server C# | Not ensured in prod. Live-check helpers, the `CALL` probe, entity counts. No test harness. | — |
 
-`ox_lib` is not a dependency. oxmysql is not gameplay code. It is present only if spike S3 falls back to its server exports. See [Persistence](#persistence). We do not write Lua either way.
+`ox_lib` is not a dependency. oxmysql is the database. Every server resource that writes calls its exports. We do not write its Lua shim. See [Persistence](#persistence) and decision 22.
 
 ```mermaid
 flowchart TB
@@ -389,10 +390,12 @@ MariaDB **13.1.1+**, because MTA `CLAUDE.md` requires that version for `item_cre
 
 **Write-through.** Every gameplay mutation is one `CALL` that commits inside the procedure. In memory: the tick table (hp, food, bleed, infection, drugs, dirty flag), the id-to-session maps, rate limits, tokens, and the held weapon's magazine, which flushes every 5 s and when it leaves the hand (#78). Tick flush every 10 s via `character_flush` (JSON rows). Flush immediately on consume, heal, damage, death, vehicle enter or exit, teleport, logout, and on `onResourceStop`. A crash loses at most 10 s of tick stats and 5 s of fired rounds. Positions of record for characters are in the same 10 s flush; item mutations are not.
 
-**Database access is C#, and the path is a spike.** Gameplay code does not call MariaDB from Lua. Two candidates, neither executed in this revision:
+**Database access is oxmysql** (decision 22, 2026-11-06). The two candidates below were the earlier plan. They are not the implementation. Gameplay code calls `Exports["oxmysql"]` with placeholders. It does not call MariaDB from Lua, and it does not go through `Db.Call`.
 
 1. A C# driver inside `lib`'s server assembly. The Mono host is .NET Framework 4.5.2. Current MySqlConnector releases target `net462` and newer, so a net452 project cannot reference them. Whether FXServer's server script host allows an arbitrary TCP socket to MariaDB was not measured. If the socket works, use the newest MySqlConnector build whose nuspec still lists `net45` or `net452`. Do not raise the TFM to make a newer driver fit. The docs lock the Mono target.
-2. If the socket is blocked, or no net452 build of the driver speaks this MariaDB cleanly, call oxmysql's existing server exports from C#. oxmysql 2.13.1 (`resources/oxmysql` in the spike: node-mysql2, `node_version '22'`) registers `query`, `single`, `scalar`, `update`, `insert`, `rawExecute`, and a `_async` twin of each (`src/index.ts`, `global.exports`). The call shape is the manifest's C# export call, `Exports["oxmysql"].single_async(...)` or the callback form. oxmysql then stays a **node** dependency. We do not write its Lua shim, and we do not ensure `ox_lib`.
+2. If the socket is blocked, or no net452 build of the driver speaks this MariaDB cleanly, call oxmysql's existing server exports from C#. oxmysql 2.13.1 (`resources/oxmysql` in the spike: node-mysql2, `node_version '22'`) registers `query`, `single`, `scalar`, `update`, `insert`, `rawExecute`, and a `_async` twin of each (`src/index.ts`, `global.exports`). The call shape is the manifest's C# export call, `Exports["oxmysql"].query(...)` with a callback. oxmysql then stays a **node** dependency. We do not write its Lua shim, and we do not ensure `ox_lib`.
+
+**Driver result, 2026-11-06.** MySqlConnector 2.1.13 is the newest release whose nuspec still lists `net45` (2.2 dropped it). That `net45` assembly references `System.IAsyncDisposable` on `mscorlib`. The FXServer Mono at `citizen/clr2/lib/mono/4.5/mscorlib.dll` does not define that type, so the driver cannot load. The owner then dropped `Db.Call` entirely. oxmysql is the access path, not a fallback.
 
 Either path is one `CALL` per mutation. Do not open a multi-statement transaction in C# around the item graph. The pool, whichever process owns it, may run two procedures at once. Same-row races stay `SELECT … FOR UPDATE` at `READ COMMITTED` inside the procedure (MariaDB error 1020 under `REPEATABLE READ`). Placeholders only. Never concatenate identifiers into SQL. That removes the MTA `share=1` / `batch=0` / single-FIFO queue. There is no queue-latency metric to copy.
 
@@ -496,7 +499,7 @@ Threats that matter: a modified client granting itself items or health, a second
 - Passwords: bcrypt cost 10, 60-character hash. The M0 spike checks a hash produced by the chosen routine verifies and fits `char(60)`. No log of the password or the hash.
 - Keypad codes stay in the defence item `data` and are never logged, same as MTA.
 - `lib.db` is the only SQL path. Placeholders only.
-- Private repo has no secret scanning. That is accepted. The mitigation is gitignore and review, not a GitHub feature the plan is forbidden to depend on.
+- The repo is public, so GitHub secret scanning and push protection are on. That does not replace gitignore. `env.cfg` stays untracked. A committed connection string is still a leak.
 
 ## Port matrix
 
@@ -510,9 +513,9 @@ MTA issue numbers are `VIRUXE/scavengesurvive-mta#N`. FiveM issues #1, #3, #4, #
 
 | ID | Area | Class | Why on FiveM | MTA | Resource |
 |---|---|---|---|---|---|
-| F001 | infra | replace | Private repo skeleton: one C# solution per resource, `fxmanifest` naming the two DLLs, `ensure` order, gitignore for `bin/`, `obj/`, and the connection string. Commit the DLLs. No public-only GitHub features. | #3, #16 | repo |
-| F002 | infra | port | `lib` `Shared`: rate, token, log, vectors. No socket. `Db.Call` and the driver reference only in `lib/Server`, not compiled into `client.net.dll`. No Lua modules, no MTA mock, no test harness. | #6 | lib |
-| F003 | persistence | replace | MariaDB from C#. Spike S3 (`item_give`) before any gameplay `CALL`. Direct driver if the Mono host allows a socket and a net452 driver exists; otherwise oxmysql exports. Not MTA `dbConnect`. | #4, #54, #53 | lib |
+| F001 | infra | replace | Repo skeleton: one C# solution per resource, `fxmanifest` naming the two DLLs, `ensure` order, gitignore for `bin/`, `obj/`, and the connection string. Commit the DLLs. The repo is public (decision 3). Wiki and Pages stay off. | #3, #16 | repo |
+| F002 | infra | port | `lib` `Shared`: rate, token, log, vectors. No socket. No `Db.Call` and no MySQL driver (decision 22). No Lua modules, no MTA mock, no test harness. | #6 | lib |
+| F003 | persistence | replace | MariaDB through oxmysql. `query`, `single`, `scalar`, `update`, `insert`, `rawExecute`. No `Db.Call`, no C# driver, no spike S3. Not MTA `dbConnect`. | #4, #54, #53 | lib |
 | F004 | persistence | port | Import the MTA dump's unchanged tables, triggers, and events. MariaDB 13.1.1+. | #4, #78 | sql |
 | F005 | persistence | replace | Schema delta: identifiers, tokens, `ban_identifiers`, drop `serial`, `bucket` replaces `dimension`, drop `interior`, `appearance` JSON, `vehicles.model` unsigned, `zone varchar(16)`. | #4, #43 | sql |
 | F006 | data | port | Item names, sizes, categories, calibres, loot weights, settings keys from ADR 0001, compiled as C# types. Both language families (`lang_*.lua` including English, `strings_*.lua` except there is no `strings_en.lua`). Recipes are the shipped `craft.lua` list (F108), not the stale text of #147. | #5, #7, #51 | data |
@@ -779,7 +782,7 @@ Scale and translate the 11,066 points and 2,017 vehicle points onto the LS heigh
 
 ## Security & Privacy Considerations
 
-Covered in [Security and privacy](#security-and-privacy) and the anti-spoof table. The short version: the client is a keyboard and a camera; MariaDB is the inventory; the server is the health authority; identifiers are staff-visible secrets; the private repo will not save us from a committed connection string.
+Covered in [Security and privacy](#security-and-privacy) and the anti-spoof table. The short version: the client is a keyboard and a camera; MariaDB is the inventory; the server is the health authority; identifiers are staff-visible secrets; a public repo will not save us from a committed connection string.
 
 ## Observability
 
@@ -819,7 +822,7 @@ F074 (explosives) is owned by M6 / PR 14. It is not in PR 11. It does not slip p
 | Loot positions must be authored by hand or by the survey tool. The 11,066 points do not transfer. | High | F066 survey tool in M0/M3. First district only. Cap 4,000. Do not block M1 and M2 on a full map. |
 | GTA V weapon damage fights the wound model. A missed cancel means double damage or a native kill. | High | F083 and spike S2 are a gate. Reconcile health every second. `SetPedSuffersCriticalHits(false)`. No PvP milestone before the spike is written down. |
 | OneSync entity cap if every world item is an entity. Infinity documents 65535 ids; that is still the wrong design, and the interaction with `onesync_population false` is not verified (`citizenfx/fivem#2751`). | High | Loose items are local objects (F043). Alarm at 1,500 networked script entities. Spike S1 confirms local `CreateObject` under lockdown. |
-| Private repo cannot use the MTA public-only features (wiki, Pages, secret scanning). | Medium | Docs live in the repo. Secrets are gitignored. Actions, issues, milestones, and labels are the tracker. Do not design a Pages site. |
+| A public repo makes a committed secret world-readable. | Medium | `env.cfg` is gitignored. Secret scanning and push protection are on. Docs live in the repo. Do not design a Pages site. |
 | `CALL` on the chosen C# path may return a nested result set or drop `ok`. The Mono host may also refuse a raw MySQL socket. | High | Spike S3 gates M2 and probes `item_give`, not `item_pickup`. Unwrap one row. If the socket fails, call oxmysql exports. Do not replace procedures with a C# transaction. |
 | `sv_entityLockdown strict` might block the local objects the projection needs. | Medium | Spike S1. Fallback is `relaxed` plus `entityCreating` cancel. |
 | Population still spawns parked vehicles at high player counts (`citizenfx/fivem#3623`). | Medium | Three layers in F009. |
@@ -857,7 +860,7 @@ The spikes below are measurements the first implementation week writes into `doc
 - MTA schema: `scavengesurvive-mta/sql/schema.sql`
 - MTA catalogues: `resources/[scavengesurvive]/data/generated/`
 - MTA issues cited inline. Tracker `VIRUXE/scavengesurvive-mta`. Open as of this writing: #40, #46, #57, #67, #96, #99, #100, #127, #134, #138, #147, #154, #155, #156, #157, #158, #159, #160, #161.
-- FiveM tracker: private `VIRUXE/scavengesurvive-v`. The 2023 repository `VIRUXE/fivem-scavengesurvive` was archived after this move.
+- FiveM tracker: public `VIRUXE/scavengesurvive-v`. The 2023 repository `VIRUXE/fivem-scavengesurvive` was archived after this move.
 - 2025 spike (read only): `/gta/v/fivem/servers/scavengesurvive/`
 - OneSync, routing buckets, entity lockdown, culling: `https://docs.fivem.net/docs/scripting-reference/onesync/`
 - Server commands (onesync, `onesync_population`, `sv_entityLockdown`, `sv_enforceGameBuild` including build 3570, `sv_maxclients`, `sv_stateBagStrictMode`, `sv_filterRequestControl`): `https://docs.fivem.net/docs/server-manual/server-commands/`
@@ -895,7 +898,7 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 - **Title:** chore: labels, milestones, epics, and the port matrix issues
 - **Files:** none required in git. GitHub labels, milestones M0–M8, epics, and one issue per F-row. Relabel #1, #3, #4, #5; leave them open.
 - **Depends on:** PR 1
-- **Description:** Labels mirror MTA: `kind/*`, `port/{port,replace,drop,defer}`, `area/*`, `priority/*`, `size/*`. Milestones M0–M8 with the exit criteria from the roadmap. One epic per milestone. Each matrix row becomes an issue whose body is the row plus the MTA issue links. Parent #1 under the auth epic, #3 under auth and character, #4 under building, #5 under character. No Projects requirement, no wiki, no Pages, no secret-scanning API calls. Drops (F134–F150) go under a "Dropped" epic so the reason is discussable.
+- **Description:** Labels mirror MTA: `kind/*`, `port/{port,replace,drop,defer}`, `area/*`, `priority/*`, `size/*`. Milestones M0–M8 with the exit criteria from the roadmap. One epic per milestone. Each matrix row becomes an issue whose body is the row plus the MTA issue links. Parent #1 under the auth epic, #3 under auth and character, #4 under building, #5 under character. No wiki and no Pages. Drops (F134–F150) go under a "Dropped" epic so the reason is discussable.
 
 ### PR 3 — Repository bootstrap
 
@@ -904,12 +907,12 @@ Both Debug and Release set `<OutputPath>..\</OutputPath>` so the assemblies land
 - **Depends on:** PR 1
 - **Description:** Each resource is the boilerplate shape and starts and stops. Both configurations output to the resource root, not `bin\Release\`. No Lua gameplay, no `shared/events.lua`, no `ox_lib`. `dev` is not ensured. The root DLLs are committed because FXServer loads them and does not compile. Connection string is not committed. Delete the 2023 layout once the skeleton exists. F001, F008, F013, F145.
 
-### PR 4 — lib, MariaDB access, schema, spikes
+### PR 4 — lib shared types, schema
 
-- **Title:** feat(lib): Db.Call, schema dump, and the day-1 spikes
-- **Files:** `lib/**` (C#), `sql/schema.sql`, `docs/spikes/S1-S6.md`. oxmysql only if S3 takes the export fallback, and then as the upstream node resource, not as Lua we write.
+- **Title:** feat(lib): shared types and the schema dump
+- **Files:** `lib/Shared/**` (C#), `sql/schema.sql`. oxmysql stays the upstream node resource. No `Db.Call`.
 - **Depends on:** PR 3
-- **Description:** Implement `Db.Call` only in `lib/Server`. The client project does not compile it and does not reference the driver. Apply the schema, including the procedure rewrite list, in the same revision as the column drop. Probe `item_give`, not the unre-written `item_pickup`. Write S1–S6. No `ox_lib`. No gameplay callers yet. Commit the rebuilt root DLLs. F002, F003, F004, F005, F012.
+- **Description:** Rate limit, one-shot token, log field shape, vectors in `lib/Shared`. No MySQL driver in either assembly. SQL stays on oxmysql exports in the resource that needs it. Apply the schema, including the column changes, as statements rather than a `CALL` gate. No `ox_lib`. Commit the rebuilt root DLLs. F002, F003, F004, F005, F012. F003 is the oxmysql path, which `server.cfg` already ensures.
 
 ### PR 5 — Catalogues
 
