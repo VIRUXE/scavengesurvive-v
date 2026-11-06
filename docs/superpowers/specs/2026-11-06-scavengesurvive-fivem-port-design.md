@@ -456,6 +456,8 @@ sv_enforceGameBuild 3570
 sv_endpointPrivacy true
 ```
 
+**F008, 2026-11-06.** `server.cfg` sets this block before the `ensure` lines. `sv_entityLockdown` is `strict`. Whether `strict` blocks a client-local `CreateObject` is still spike S1. The routing-bucket and client density layers stay on F009. `exec env.cfg` follows the block, so that file must not set `sv_maxclients` or it replaces 200. The gitignored `env.cfg` on this host does not.
+
 `sv_maxclients` above 64 requires `onesync on` (`https://docs.fivem.net/docs/server-manual/server-commands/#sv_maxclients-newvalue`). Above 48 slots, OneSync is not free. `ensure` order: `lib`, `data`, `logs`, `auth`, `character`, `items`, `crafting`, `apparel`, `weapons`, `vehicles`, `loot`, `building`, `world`, `hud`, `anticheat`, `staff`. If S3 keeps oxmysql, it is ensured first and is the node resource from upstream, not code we write. `dev` is not ensured in prod. Stock `chat` may be ensured. `spawnmanager` and `sessionmanager` must not fight `character` for the spawn; if they respawn the ped, they are stopped. `hardcap` from the 2023 tree is not used; `sv_maxclients` is the cap. No `ox_lib`.
 
 ### Load, failure, operations
