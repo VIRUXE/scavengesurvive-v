@@ -21,6 +21,13 @@ namespace Server
 
         public static void Open(int accountId, string name, Dictionary<string, string> identifiers, Action<long> done)
         {
+            Open(accountId, name, identifiers, null, done);
+        }
+
+        // opened fires with the log id as soon as the row exists, before the identifier write.
+        // oxmysql does not call back when a statement fails, so the caller must keep the id from here.
+        public static void Open(int accountId, string name, Dictionary<string, string> identifiers, Action<long> opened, Action<long> done)
+        {
             var set = new Dictionary<string, string>();
             if (identifiers != null)
             {
@@ -48,6 +55,7 @@ namespace Server
                     return;
                 }
 
+                if (opened != null) opened(logId);
                 MySql.Update(IdentifierSql, new object[] { logId, Links.IdentifierJson(set) }, new Action<dynamic>(written =>
                 {
                     if (written == null)
@@ -105,6 +113,7 @@ namespace Server
             int _account;
             long _log;
             long _longLog;
+            long _early;
             int _identifiers = -1;
             int _ip;
             int _noToken;
@@ -138,7 +147,7 @@ namespace Server
                             Step = "account";
                             _account = (int)Connections.ToId(id);
                             if (_account <= 0) { Finish("account"); return; }
-                            Connections.Open(_account, Name, _ids, new Action<long>(logId =>
+                            Connections.Open(_account, Name, _ids, new Action<long>(early => _early = early), new Action<long>(logId =>
                             {
                                 Step = "opened";
                                 _log = logId;
@@ -241,8 +250,8 @@ namespace Server
                 }
 
                 bool ok = _log > 0 && _identifiers == 8 && _ip == 1 && _noToken == 1 && _noSerial == 1
-                    && _closed == 1 && _idempotent == 1 && _longIp == 1 && cleaned == 1;
-                _done((ok ? "ok" : "failed") + " open=" + (_log > 0 ? 1 : 0) + " identifiers=" + _identifiers
+                    && _closed == 1 && _idempotent == 1 && _longIp == 1 && _early == _log && cleaned == 1;
+                _done((ok ? "ok" : "failed") + " open=" + (_log > 0 ? 1 : 0) + " early=" + (_early == _log ? 1 : 0) + " identifiers=" + _identifiers
                     + " tokens=" + (_noToken == 1 ? 0 : 1) + " ip=" + _ip + " longip=" + _longIp
                     + " closed=" + _closed + " idempotent=" + _idempotent + " cleaned=" + cleaned);
             }

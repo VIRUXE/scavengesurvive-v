@@ -435,7 +435,12 @@ namespace Server
 
         void OpenLog(Session session)
         {
-            Connections.Open(session.AccountId, session.Username, session.Identifiers, logId =>
+            Connections.Open(session.AccountId, session.Username, session.Identifiers, opened =>
+            {
+                session.LogId = opened;
+                if (session.Left)
+                    Connections.Close(opened, null);
+            }, logId =>
             {
                 var fields = new Dictionary<string, object>();
                 fields["player"] = session.Source;
@@ -444,10 +449,6 @@ namespace Server
                 fields["code"] = logId > 0 ? "logged" : "log_failed";
                 fields["log_id"] = logId;
                 Note("session.logged", fields);
-                if (logId <= 0) return;
-                session.LogId = logId;
-                if (session.Left)
-                    Connections.Close(logId, null);
             });
         }
 
