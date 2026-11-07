@@ -713,7 +713,7 @@ namespace Server
             {
                 var fields = ConnectedFields(session);
                 fields["ok"] = false;
-                fields["code"] = "BANNED";
+                fields["code"] = hit.Alias ? "BANNED_ALIAS" : "BANNED";
                 fields["ban_id"] = hit.BanId;
                 fields["ban_reason"] = hit.Reason ?? "";
                 fields["by_name"] = hit.ByName ?? "Server";
