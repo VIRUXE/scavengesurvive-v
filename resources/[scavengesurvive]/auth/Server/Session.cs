@@ -13,6 +13,8 @@ namespace Server
         public int AdminLevel;
         public bool HasAccount;
         public bool Spawned;
+        public long LogId;
+        public bool Left;
     }
 
     static class Sessions

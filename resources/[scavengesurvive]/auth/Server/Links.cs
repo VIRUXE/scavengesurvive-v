@@ -146,7 +146,7 @@ namespace Server
             new ProbeRun(done).Start();
         }
 
-        static string IdentifierJson(Dictionary<string, string> attempted)
+        internal static string IdentifierJson(Dictionary<string, string> attempted)
         {
             var body = new StringBuilder();
             body.Append('[');

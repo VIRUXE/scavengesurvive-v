@@ -15,6 +15,7 @@ namespace Server
             EventHandlers["playerConnecting"] += new Action<Player, string, dynamic, dynamic>(OnConnecting);
             EventHandlers["playerJoining"] += new Action<Player, string>(OnJoining);
             EventHandlers["playerDropped"] += new Action<Player, string>(OnDropped);
+            EventHandlers["onResourceStop"] += new Action<string>(OnStopped);
             EventHandlers["player:spawned"] += new Action<Player>(OnSpawned);
             Tick += Pump;
             API.RegisterCommand("authcapture", new Action<int, List<object>, string>(OnCapture), true);
@@ -22,6 +23,7 @@ namespace Server
             API.RegisterCommand("authpass", new Action<int, List<object>, string>(OnPass), true);
             API.RegisterCommand("authresume", new Action<int, List<object>, string>(OnResumeProbe), true);
             API.RegisterCommand("authban", new Action<int, List<object>, string>(OnBanProbe), true);
+            API.RegisterCommand("authconnlog", new Action<int, List<object>, string>(OnConnLogProbe), true);
             API.RegisterCommand("authwhitelist", new Action<int, List<object>, string>(OnWhitelistProbe), true);
             Exports.Add("getAccountId", new Func<string, object>(GetAccountId));
             Exports.Add("getAdminLevel", new Func<string, object>(GetAdminLevel));
@@ -412,7 +414,75 @@ namespace Server
             if (session != null)
                 Debug.WriteLine("(" + source + ") " + session.Name + " dropped");
             Whitelist.Left(session);
+            CloseLog(session);
             Sessions.End(source);
+        }
+
+        void OnStopped(string resource)
+        {
+            if (resource != API.GetCurrentResourceName()) return;
+            foreach (Session session in Sessions.Copy())
+                CloseLog(session);
+        }
+
+        static void CloseLog(Session session)
+        {
+            if (session == null || session.Left) return;
+            session.Left = true;
+            if (session.LogId > 0)
+                Connections.Close(session.LogId, null);
+        }
+
+        void OpenLog(Session session)
+        {
+            Connections.Open(session.AccountId, session.Username, session.Identifiers, logId =>
+            {
+                var fields = new Dictionary<string, object>();
+                fields["player"] = session.Source;
+                fields["account_id"] = session.AccountId;
+                fields["ok"] = logId > 0;
+                fields["code"] = logId > 0 ? "logged" : "log_failed";
+                fields["log_id"] = logId;
+                Note("session.logged", fields);
+                if (logId <= 0) return;
+                session.LogId = logId;
+                if (session.Left)
+                    Connections.Close(logId, null);
+            });
+        }
+
+        async void OnConnLogProbe(int source, List<object> args, string raw)
+        {
+            string line = null;
+            try
+            {
+                Connections.Probe(result => line = result);
+                for (int i = 0; i < 120 && line == null; i++)
+                    await Delay(100);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] authconnlog failed: " + ex.GetType().Name);
+                return;
+            }
+
+            if (line == null)
+            {
+                Debug.WriteLine("[auth] authconnlog failed step=timeout at=" + Connections.Step);
+                MySql.Update(
+                    "DELETE FROM connection_log WHERE name = 'f021a'",
+                    new object[0],
+                    new Action<dynamic>(unused =>
+                    {
+                        MySql.Update(
+                            "DELETE FROM accounts WHERE name = 'f021a'",
+                            new object[0],
+                            new Action<dynamic>(unused2 => { }));
+                    }));
+                return;
+            }
+
+            Debug.WriteLine("[auth] authconnlog " + line);
         }
 
         void Present(dynamic deferrals, string source, string message, string name)
@@ -799,6 +869,7 @@ namespace Server
                     Note("session.authenticated", authed);
                     deferrals.done();
                     Whitelist.Joined(session);
+                    OpenLog(session);
                 });
             }));
         }
