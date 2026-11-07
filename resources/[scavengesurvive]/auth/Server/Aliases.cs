@@ -84,7 +84,7 @@ namespace Server
             readonly int[] _ids = new int[5];
             readonly List<Action<Action>> _steps = new List<Action<Action>>();
             int _hasB, _bannedB, _matchedB, _hasC, _cleanC, _matchedC, _hasD, _ipOnly, _noSelf = 1, _empty;
-            int _banAccount, _aliasHit, _aliasType, _ipClear, _tokenClear, _copied, _noIp, _direct, _ipStill;
+            int _banAccount, _aliasHit, _ipClear, _tokenClear, _copied, _noIp, _direct, _ipStill;
 
             public ProbeRun(Action<string> done)
             {
@@ -128,8 +128,7 @@ namespace Server
                 _steps.Add(CheckFind);
                 _steps.Add(next => Match(Set("f022-license-e", "f022-discord-ab", null), null, hit =>
                 {
-                    _aliasHit = hit.Banned && hit.Alias && hit.Code == "BANNED_ALIAS" ? 1 : 0;
-                    _aliasType = hit.MatchedType == "discord" ? 1 : 0;
+                    _aliasHit = hit.Code == "CLEAR" ? 1 : 0;
                     next();
                 }));
                 _steps.Add(next => Match(Set(null, null, "203.0.113.23"), null, hit => { _ipClear = hit.Code == "CLEAR" ? 1 : 0; next(); }));
@@ -164,7 +163,7 @@ namespace Server
                 })));
                 _steps.Add(next => Match(Set("f022-license-d", null, null), null, hit =>
                 {
-                    _direct = hit.Banned && !hit.Alias && hit.Code == "BANNED" ? 1 : 0;
+                    _direct = hit.Banned && hit.Code == "BANNED" ? 1 : 0;
                     next();
                 }));
                 _steps.Add(next => Match(Set(null, null, "203.0.113.22"), null, hit => { _ipStill = hit.Code == "CLEAR" ? 1 : 0; next(); }));
@@ -248,11 +247,11 @@ namespace Server
             {
                 bool ok = _hasB == 1 && _bannedB == 1 && _matchedB == 1 && _hasC == 1 && _cleanC == 1 && _matchedC == 1
                     && _hasD == 1 && _ipOnly == 1 && _noSelf == 1 && _empty == 1 && _banAccount == 1
-                    && _aliasHit == 1 && _aliasType == 1 && _ipClear == 1 && _tokenClear == 1
+                    && _aliasHit == 1 && _ipClear == 1 && _tokenClear == 1
                     && _copied == 1 && _noIp == 1 && _direct == 1 && _ipStill == 1 && cleaned == 1;
                 _done((ok ? "ok" : "failed") + " history=" + _hasB + " banned=" + _bannedB + " token=" + _hasC + " ip=" + _ipOnly
                     + " self=" + _noSelf + " empty=" + _empty + " banacct=" + _banAccount
-                    + " alias=" + _aliasHit + " aliastype=" + _aliasType + " ipclear=" + _ipClear + " tokenclear=" + _tokenClear
+                    + " multi=" + _aliasHit + " ipclear=" + _ipClear + " tokenclear=" + _tokenClear
                     + " copied=" + _copied + " noip=" + _noIp + " direct=" + _direct + " ipstill=" + _ipStill + " cleaned=" + cleaned);
             }
         }

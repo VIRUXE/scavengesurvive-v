@@ -25,7 +25,6 @@ namespace Server
         public string Created;
         public string Expires;
         public string MatchedType;
-        public bool Alias;
     }
 
     static class Bans
@@ -57,25 +56,6 @@ namespace Server
             "SELECT b.id, ai.type, ai.value FROM bans b JOIN account_identifiers ai ON ai.account_id = b.account_id " +
             "WHERE b.id = ? AND ai.type <> 'ip' " +
             "UNION SELECT b.id, 'token', t.token FROM bans b JOIN account_tokens t ON t.account_id = b.account_id WHERE b.id = ?";
-
-        // F022: strong keys only. A shared ip is reported by Aliases, never refused.
-        internal const string StrongTypes = "'steam','discord','xbl','live','license','license2','fivem','token'";
-
-        const string AliasMatchSql =
-            "WITH k AS (SELECT jt.type, jt.value FROM JSON_TABLE(?, '$[*]' COLUMNS (" +
-            "type VARCHAR(16) PATH '$.type', value VARCHAR(255) PATH '$.value')) jt " +
-            "WHERE jt.type IN (" + StrongTypes + ") AND jt.value IS NOT NULL AND CHAR_LENGTH(jt.value) BETWEEN 1 AND 255) " +
-            "SELECT b.id, b.account_id, b.name, b.reason, b.by_name, " +
-            "DATE_FORMAT(b.created_at, '%Y-%m-%d %H:%i') AS created, " +
-            "DATE_FORMAT(b.expires_at, '%Y-%m-%d %H:%i') AS expires, o.type AS matched_type " +
-            "FROM (" +
-            "SELECT ai.account_id, ai.type FROM account_identifiers ai JOIN k ON k.type = ai.type AND k.value = ai.value " +
-            "UNION ALL SELECT t.account_id, 'token' FROM account_tokens t JOIN k ON k.type = 'token' AND k.value = t.token " +
-            "UNION ALL SELECT l.account_id, ci.type FROM connection_identifiers ci JOIN k ON k.type = ci.type AND k.value = ci.value " +
-            "JOIN connection_log l ON l.id = ci.log_id WHERE l.account_id IS NOT NULL" +
-            ") o JOIN accounts a ON a.id = o.account_id " +
-            "JOIN bans b ON b.active = 1 AND (b.expires_at IS NULL OR b.expires_at > NOW()) AND (b.account_id = a.id OR b.name = a.name) " +
-            "ORDER BY b.created_at DESC, b.id DESC LIMIT 1";
 
         const string ExpiresSql =
             "SELECT DATE_FORMAT(expires_at, '%Y-%m-%d %H:%i:%s') AS expires_at FROM bans WHERE id = ?";
@@ -184,20 +164,11 @@ namespace Server
             string json = Json(keys);
             MySql.Single(MatchSql, new object[] { json }, new Action<dynamic>(row =>
             {
-                if (row != null)
-                {
-                    done(ToHit(row, false));
-                    return;
-                }
-
-                MySql.Single(AliasMatchSql, new object[] { json }, new Action<dynamic>(alias =>
-                {
-                    done(alias == null ? Hit("CLEAR") : ToHit(alias, true));
-                }));
+                done(row == null ? Hit("CLEAR") : ToHit(row));
             }));
         }
 
-        static BanHit ToHit(dynamic row, bool alias)
+        static BanHit ToHit(dynamic row)
         {
             int banId = MySql.Int(row, "id");
             if (banId <= 0)
@@ -207,8 +178,7 @@ namespace Server
             return new BanHit
             {
                 Banned = true,
-                Code = alias ? "BANNED_ALIAS" : "BANNED",
-                Alias = alias,
+                Code = "BANNED",
                 BanId = banId,
                 AccountId = MySql.Int(row, "account_id"),
                 Name = MySql.Text(row, "name"),
@@ -226,8 +196,6 @@ namespace Server
             string created = hit == null || hit.Created == null ? "" : hit.Created;
             string expires = hit == null || string.IsNullOrEmpty(hit.Expires) ? "Never" : hit.Expires;
             string reason = hit == null || hit.Reason == null ? "" : hit.Reason;
-            if (hit != null && hit.Alias)
-                return "One of your previously used accounts is banned.\nReason: " + reason + "\nUnban: " + expires;
             return "You are banned (since " + created + " by " + by + ").\nReason: " + reason + "\nUnban: " + expires;
         }
 
