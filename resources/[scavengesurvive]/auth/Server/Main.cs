@@ -24,6 +24,7 @@ namespace Server
             API.RegisterCommand("authresume", new Action<int, List<object>, string>(OnResumeProbe), true);
             API.RegisterCommand("authban", new Action<int, List<object>, string>(OnBanProbe), true);
             API.RegisterCommand("authconnlog", new Action<int, List<object>, string>(OnConnLogProbe), true);
+            API.RegisterCommand("authalias", new Action<int, List<object>, string>(OnAliasProbe), true);
             API.RegisterCommand("authwhitelist", new Action<int, List<object>, string>(OnWhitelistProbe), true);
             Exports.Add("getAccountId", new Func<string, object>(GetAccountId));
             Exports.Add("getAdminLevel", new Func<string, object>(GetAdminLevel));
@@ -449,7 +450,57 @@ namespace Server
                 fields["code"] = logId > 0 ? "logged" : "log_failed";
                 fields["log_id"] = logId;
                 Note("session.logged", fields);
+                if (logId > 0) ReportAliases(session);
             });
+        }
+
+        // F022: count and kinds only. Names and identifier values stay out of the log line.
+        void ReportAliases(Session session)
+        {
+            Aliases.Find(session.AccountId, list =>
+            {
+                if (list.Count == 0) return;
+                int banned = 0;
+                var kinds = new SortedDictionary<string, bool>();
+                foreach (Alias alias in list)
+                {
+                    if (alias.Banned) banned++;
+                    foreach (string kind in alias.Matched.Split(','))
+                        if (kind.Length > 0) kinds[kind] = true;
+                }
+
+                var fields = new Dictionary<string, object>();
+                fields["player"] = session.Source;
+                fields["account_id"] = session.AccountId;
+                fields["aliases"] = list.Count;
+                fields["banned_aliases"] = banned;
+                fields["matched"] = string.Join(",", new List<string>(kinds.Keys).ToArray());
+                Note("session.aliases", fields);
+            });
+        }
+
+        async void OnAliasProbe(int source, List<object> args, string raw)
+        {
+            string line = null;
+            try
+            {
+                Aliases.Probe(result => line = result);
+                for (int i = 0; i < 120 && line == null; i++)
+                    await Delay(100);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] authalias failed: " + ex.GetType().Name);
+                return;
+            }
+
+            if (line == null)
+            {
+                Debug.WriteLine("[auth] authalias failed step=timeout at=" + Aliases.Step);
+                return;
+            }
+
+            Debug.WriteLine("[auth] authalias " + line);
         }
 
         async void OnConnLogProbe(int source, List<object> args, string raw)
