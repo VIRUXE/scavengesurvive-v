@@ -15,6 +15,13 @@ namespace Server
         public bool Spawned;
         public long LogId;
         public bool Left;
+        public string Language;
+        public bool SaveLanguage;
+        public bool AwaitingLanguage;
+        public int PendingId;
+        public string PendingName;
+        public int PendingAdmin;
+        public string PendingMethod;
     }
 
     static class Sessions

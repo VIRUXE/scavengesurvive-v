@@ -26,15 +26,19 @@ namespace Server
             API.RegisterCommand("authconnlog", new Action<int, List<object>, string>(OnConnLogProbe), true);
             API.RegisterCommand("authalias", new Action<int, List<object>, string>(OnAliasProbe), true);
             API.RegisterCommand("authwhitelist", new Action<int, List<object>, string>(OnWhitelistProbe), true);
+            API.RegisterCommand("authlang", new Action<int, List<object>, string>(OnLangProbe), true);
+            API.RegisterCommand("lang", new Action<int, List<object>, string>(OnLang), false);
             Exports.Add("getAccountId", new Func<string, object>(GetAccountId));
             Exports.Add("getAdminLevel", new Func<string, object>(GetAdminLevel));
+            Exports.Add("getLanguage", new Func<string, object>(GetLanguage));
+            Language.Bind(Translate);
             Exports.Add("setWhitelistEnabled", new Func<bool, bool>(Whitelist.SetEnabled));
             Exports.Add("isWhitelistEnabled", new Func<bool>(() => Whitelist.Enabled));
             Exports.Add("setWhitelistAuto", new Func<bool, bool>(Whitelist.SetAuto));
             Exports.Add("isWhitelistAuto", new Func<bool>(() => Whitelist.Auto));
             Exports.Add("whitelistNameChanged", new Action<string, bool>(Whitelist.NameChanged));
             Whitelist.Bind(ShowCountdown, Tell, Kick, Note);
-            Debug.WriteLine("auth server started. bans, license auto-resume, the card, then the whitelist.");
+            Debug.WriteLine("auth server started. bans, license auto-resume, language, the card, then the whitelist.");
         }
 
         bool whitelistLoaded;
@@ -92,6 +96,30 @@ namespace Server
             if (session == null || !session.HasAccount)
                 return null;
             return session.AdminLevel;
+        }
+
+        static object GetLanguage(string source)
+        {
+            Session session = Sessions.Get(source);
+            if (session == null || !session.HasAccount || string.IsNullOrEmpty(session.Language))
+                return "en";
+            return session.Language;
+        }
+
+        string Translate(string language, string english)
+        {
+            if (API.GetResourceState("data") != "started")
+                return english;
+            try
+            {
+                object value = Exports["data"].langTextFor(language, english);
+                string text = value == null ? "" : Convert.ToString(value, CultureInfo.InvariantCulture);
+                return string.IsNullOrEmpty(text) ? english : text;
+            }
+            catch (Exception)
+            {
+                return english;
+            }
         }
 
         // FiveM requires one tick after defer before update, presentCard, or done.
@@ -398,6 +426,7 @@ namespace Server
             if (session == null || !session.HasAccount) return;
 
             player.State.Set("username", session.Username, true);
+            player.State.Set("lang", string.IsNullOrEmpty(session.Language) ? "en" : session.Language, true);
             TriggerEvent("playerAuthenticated", player.Handle);
             Debug.WriteLine("(" + player.Handle + ") " + session.Name + " [" + session.Username + "] has logged in.");
         }
@@ -537,6 +566,157 @@ namespace Server
             Debug.WriteLine("[auth] authconnlog " + line);
         }
 
+        void Continue(dynamic deferrals, string source, AccountResult result, string method)
+        {
+            Session session = Sessions.Get(source);
+            if (session == null)
+            {
+                try
+                {
+                    deferrals.done("Connection closed.");
+                }
+                catch (Exception)
+                {
+                }
+
+                return;
+            }
+
+            string stored = result == null ? null : result.Lang;
+            if (Language.NeedsOffer(stored, session.Language))
+            {
+                session.AwaitingLanguage = true;
+                session.PendingId = result.AccountId;
+                session.PendingName = result.Name;
+                session.PendingAdmin = result.AdminLevel;
+                session.PendingMethod = method;
+                PresentLanguage(deferrals, source);
+                return;
+            }
+
+            string known = Language.Normalize(stored);
+            if (known.Length > 0)
+                session.Language = known;
+            else if (string.IsNullOrEmpty(session.Language))
+                session.Language = "en";
+            Accept(deferrals, source, result.AccountId, result.Name, result.AdminLevel, method);
+        }
+
+        void PresentLanguage(dynamic deferrals, string source)
+        {
+            deferrals.presentCard(Language.Card(), new Action<dynamic, string>((data, raw) =>
+            {
+                Session session = Sessions.Get(source);
+                if (session == null || !session.AwaitingLanguage)
+                {
+                    Close(deferrals, source, "Connection closed.");
+                    return;
+                }
+
+                if (data == null)
+                {
+                    var fields = new Dictionary<string, object>();
+                    fields["player"] = source;
+                    fields["ok"] = false;
+                    fields["code"] = "LEFT";
+                    fields["reason"] = "dialogLeft";
+                    if (session.PendingId > 0)
+                        fields["account_id"] = session.PendingId;
+                    Note("session.kicked", fields);
+                    Close(deferrals, source, "Left without logging in");
+                    return;
+                }
+
+                string code = Language.Normalize(CardField(data, "language"));
+                if (code.Length == 0)
+                {
+                    PresentLanguage(deferrals, source);
+                    return;
+                }
+
+                session.AwaitingLanguage = false;
+                session.Language = code;
+                session.SaveLanguage = true;
+                Accept(deferrals, source, session.PendingId, session.PendingName, session.PendingAdmin, session.PendingMethod);
+            }));
+        }
+
+        void OnLang(int source, List<object> args, string raw)
+        {
+            if (source <= 0)
+                return;
+
+            string id = source.ToString(CultureInfo.InvariantCulture);
+            Session session = Sessions.Get(id);
+            string current = session != null && !string.IsNullOrEmpty(session.Language) ? session.Language : "en";
+            if (session == null || !session.HasAccount)
+            {
+                Tell(id, " >  " + Language.Sentence(current, "Log in first."));
+                return;
+            }
+
+            string given = args != null && args.Count > 0 ? Convert.ToString(args[0], CultureInfo.InvariantCulture) : "";
+            string code = Language.Normalize(given);
+            if (code.Length == 0)
+            {
+                Tell(id, " >  " + Language.Format(current, "Usage: /lang <%s> (now %s)", Language.List, current));
+                return;
+            }
+
+            session.Language = code;
+            Language.Save(session.AccountId, code, true, null);
+            PublishLang(id, code);
+            Tell(id, " >  " + Language.Format(code, "Language set to %s.", code));
+            var fields = new Dictionary<string, object>();
+            fields["player"] = id;
+            fields["account_id"] = session.AccountId;
+            fields["lang"] = code;
+            fields["via"] = "command";
+            Note("session.languageSet", fields);
+        }
+
+        void PublishLang(string source, string code)
+        {
+            try
+            {
+                Player player = Players[source];
+                if (player != null)
+                    player.State.Set("lang", code, true);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] lang state failed: " + ex.GetType().Name);
+            }
+        }
+
+        async void OnLangProbe(int source, List<object> args, string raw)
+        {
+            string line = null;
+            try
+            {
+                Language.Probe(result => line = result);
+                for (int i = 0; i < 120 && line == null; i++)
+                    await Delay(100);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[auth] authlang failed: " + ex.GetType().Name);
+                return;
+            }
+
+            if (line == null)
+            {
+                Debug.WriteLine("[auth] authlang failed step=timeout at=" + Language.Step);
+                MySql.Update(
+                    "DELETE FROM accounts WHERE name IN ('f023a', 'f023b')",
+                    new object[0],
+                    new Action<dynamic>(unused => { }));
+                return;
+            }
+
+            Debug.WriteLine("[auth] authlang " + line);
+        }
+
         void Present(dynamic deferrals, string source, string message, string name)
         {
             deferrals.presentCard(Card(message, name), new Action<dynamic, string>((data, raw) =>
@@ -606,7 +786,7 @@ namespace Server
             string code = result == null ? "DB_ERROR" : result.Code;
             if (result != null && result.Ok && code == "OK")
             {
-                Accept(deferrals, source, result.AccountId, result.Name, result.AdminLevel, action);
+                Continue(deferrals, source, result, action);
                 return;
             }
 
@@ -767,7 +947,7 @@ namespace Server
             string code = result == null ? "DB_ERROR" : result.Code;
             if (result != null && result.Ok && code == "OK")
             {
-                Accept(deferrals, source, result.AccountId, result.Name, result.AdminLevel, "license");
+                Continue(deferrals, source, result, "license");
                 return;
             }
 
@@ -911,6 +1091,20 @@ namespace Server
                     session.AccountId = id;
                     session.Username = username;
                     session.AdminLevel = adminLevel;
+                    if (string.IsNullOrEmpty(session.Language))
+                        session.Language = "en";
+                    if (session.SaveLanguage)
+                    {
+                        session.SaveLanguage = false;
+                        string picked = session.Language;
+                        Language.Save(id, picked, false, null);
+                        var chosen = new Dictionary<string, object>();
+                        chosen["player"] = source;
+                        chosen["account_id"] = id;
+                        chosen["lang"] = picked;
+                        chosen["via"] = "dialog";
+                        Note("session.languageSet", chosen);
+                    }
                     var authed = new Dictionary<string, object>();
                     authed["player"] = source;
                     authed["account_id"] = id;

@@ -13,6 +13,7 @@ namespace Server
         public string Name;
         public int AdminLevel;
         public int Attempts;
+        public string Lang;
     }
 
     static class Accounts
@@ -21,7 +22,7 @@ namespace Server
         const long LockTicks = 10L * 60L * TimeSpan.TicksPerSecond;
 
         const string LookupSql =
-            "SELECT id, name, password_hash, admin_level, active FROM accounts WHERE name = ?";
+            "SELECT id, name, password_hash, admin_level, active, lang FROM accounts WHERE name = ?";
 
         const string InsertSql =
             "INSERT INTO accounts (name, password_hash, last_ip, last_login_at) VALUES (?, ?, ?, current_timestamp())";
@@ -35,7 +36,7 @@ namespace Server
             "SELECT svalue FROM settings WHERE skey = 'auth.license_autologin'";
 
         const string LicenseSql =
-            "SELECT a.id, a.name, a.admin_level, a.active " +
+            "SELECT a.id, a.name, a.admin_level, a.active, a.lang " +
             "FROM account_identifiers i " +
             "INNER JOIN accounts a ON a.id = i.account_id " +
             "WHERE i.type = 'license' AND i.value = ?";
@@ -177,7 +178,8 @@ namespace Server
                             Code = "OK",
                             AccountId = accountId,
                             Name = stored,
-                            AdminLevel = admin
+                            AdminLevel = admin,
+                            Lang = MySql.Text(row, "lang")
                         });
                     }));
                 });
@@ -262,7 +264,8 @@ namespace Server
                             Code = "OK",
                             AccountId = accountId,
                             Name = stored,
-                            AdminLevel = admin
+                            AdminLevel = admin,
+                            Lang = MySql.Text(match, "lang")
                         });
                     }));
                 }));
